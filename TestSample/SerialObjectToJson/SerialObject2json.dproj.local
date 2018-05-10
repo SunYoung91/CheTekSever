@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2018/05/10 19:16:31.000.473,=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2018/05/10 19:17:23.000.368,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.pas=E:\CheTekSever\TestSample\SerialObjectToJson\Unit1.pas</Transaction>
+    <Transaction>2018/05/10 19:17:23.000.368,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.dfm=E:\CheTekSever\TestSample\SerialObjectToJson\Unit1.dfm</Transaction>
+    <Transaction>2018/05/10 19:17:25.000.895,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Project2.dproj=E:\CheTekSever\TestSample\SerialObjectToJson\Project2.dproj</Transaction>
+    <Transaction>2018/05/10 19:17:41.000.608,E:\CheTekSever\TestSample\SerialObjectToJson\Project2.dproj=E:\CheTekSever\TestSample\SerialObjectToJson\SerialObject2json.dproj</Transaction>
+    <Transaction>2018/05/10 19:20:16.975,=E:\CheTekSever\TestSample\SerialObjectToJson\Unit2.pas</Transaction>
+    <Transaction>2018/05/10 19:21:59.986,E:\CheTekSever\TestSample\SerialObjectToJson\CheTek.SerialObject.pas=E:\CheTekSever\TestSample\SerialObjectToJson\Unit2.pas</Transaction>
+    <Transaction>2018/05/10 19:22:10.314,E:\CheTekSever\CheTekCommon\CheTek.SerialObject.pas=E:\CheTekSever\TestSample\SerialObjectToJson\CheTek.SerialObject.pas</Transaction>
+  </Transactions>
+</BorlandProject>
