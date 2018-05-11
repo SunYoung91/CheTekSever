@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2018/05/11 00:10:37.000.988,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Project2.dproj=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\DBCodeGen.dproj</Transaction>
+    <Transaction>2018/05/11 00:10:46.000.933,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\DBCodeGen.dproj=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\DBCodeGen.dproj</Transaction>
+    <Transaction>2018/05/11 00:10:59.000.509,=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2018/05/11 00:11:23.000.245,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.pas=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\GenCode.pas</Transaction>
+    <Transaction>2018/05/11 00:11:52.000.154,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\GenCode.pas=E:\CheTekSever\Tools\DBCodeGen\GenCode.pas</Transaction>
+    <Transaction>2018/05/11 00:12:23.000.164,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\DBCodeGen.dproj=E:\CheTekSever\Tools\DBCodeGen\DBCodeGen.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <Transactions>
+    <Transaction>2018/05/10 23:52:13.539,=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2018/05/10 23:52:28.233,C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\DBGenTest.dproj=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Project2.dproj</Transaction>
+    <Transaction>2018/05/10 23:52:48.382,E:\CheTekSever\TestSample\DBGenTest\Unit1.dfm=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.dfm</Transaction>
+    <Transaction>2018/05/10 23:52:48.382,E:\CheTekSever\TestSample\DBGenTest\Unit1.pas=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2018/05/10 23:52:50.771,E:\CheTekSever\TestSample\DBGenTest\DBGenTest.dproj=C:\Users\kadin_changyu\Documents\Embarcadero\Studio\Projects\DBGenTest.dproj</Transaction>
+    <Transaction>2018/05/10 23:54:02.169,=E:\CheTekSever\TestSample\DBGenTest\Unit2.pas</Transaction>
+    <Transaction>2018/05/10 23:54:13.100,E:\CheTekSever\TestSample\DBGenTest\DBDate.pas=E:\CheTekSever\TestSample\DBGenTest\Unit2.pas</Transaction>
+    <Transaction>2018/05/10 23:54:15.954,E:\CheTekSever\TestSample\DBGenTest\DBData.pas=E:\CheTekSever\TestSample\DBGenTest\DBDate.pas</Transaction>
+  </Transactions>
+</BorlandProject>
