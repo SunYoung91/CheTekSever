@@ -14,6 +14,7 @@ type
         constructor Create(const SourceFile,TargetDir:String);
         procedure BuildTargetFile(SyntaxTree: TSyntaxNode);
         function FindInterfaceNode(SyntaxTree: TSyntaxNode):TSyntaxNode;
+		procedure ProcessTypeDecl(SyntaxTree: TSyntaxNode);
         procedure Gen();
     end;
 implementation
@@ -26,6 +27,11 @@ var
 begin
   InterfaceNode := FindInterfaceNode(SyntaxTree);
 
+  if InterfaceNode <> nil then
+  begin
+	
+  
+  end
 end;
 
 constructor TCodeGen.Create(const SourceFile, TargetDir: String);
