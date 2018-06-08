@@ -4,9 +4,18 @@ program DBCodeGen;
 
 {$R *.res}
 
+
+{$R 'DBCodeGenResource.res' 'DBCodeGenResource.rc'}
+
 uses
   System.SysUtils,
-  GenCode in 'GenCode.pas';
+  GenCode in 'GenCode.pas',
+  Actor in 'Test\Actor.pas',
+  AttrType in 'Test\AttrType.pas',
+  MysqlOP in 'MysqlOP.pas',
+  DoubleDict in 'DoubleDict.pas',
+  DBTemplelate in 'DBTemplelate.pas',
+  TableCodeGen in 'TableCodeGen.pas';
 
 begin
   try
