@@ -1,9 +1,11 @@
-program payTest;
+program MysqlTest;
 
 uses
   Forms,
   Unit1 in 'Unit1.pas' {Form1},
-  uTMySql in 'mysql\uTMySql.pas';
+  CheTek.Mysql in '..\..\mysql\CheTek.Mysql.pas',
+  mysql in '..\..\mysql\mysql.pas',
+  CheTek.MysqlPool in '..\..\mysql\CheTek.MysqlPool.pas';
 
 {$R *.res}
 

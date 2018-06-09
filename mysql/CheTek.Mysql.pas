@@ -4,12 +4,13 @@
 (* author : 一路随云 qq:531662161)
 (* 参考: http://www.cnblogs.com/doorsky/archive/2010/01/05/1639980.html *)
 
-unit uTMySql;
+
+unit CheTek.MySql;
 
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes,
+  Windows, Messages, SysUtils, Classes,System.Generics.Collections,
   Mysql;
 type
 
@@ -28,7 +29,7 @@ type
 
     m_nFieldIndex: Integer; //当前列索引
 
-    m_FieldIndexList: TStringList; //字段名称对应的Index 用来实现FieldByName()
+    m_FieldIndexList: TDictionary<String,Integer>; //字段名称对应的Index 用来实现FieldByName()
 
     procedure SetEmpty(); //设置为结果集为空
 
@@ -38,26 +39,27 @@ type
 
     procedure CleanUp(); //清理资源
 
-    function FieldIndex(sName: AnsiString): Integer; //根据字段名 获取字段名的下标
+    function FieldIndex(sName: String): Integer; //根据字段名 获取字段名的下标
 
     destructor Destroy; override; //这一行会 报 H2269 的提示 忽略他
   public
+
     constructor Create; //如果尝试 手动Create 应当立马报错
     destructor free; //如果尝试 手动Free 应该立即报错
-
     function EOF: Boolean; //当前是否已经到数据集尾部了(无法继续读取)
 
     procedure First; //移动到行首
 
     procedure Next; //移动到下一行
     function FieldAsPointer(nFieldIndex: Integer): PAnsiChar;
-    function Field(nFieldIndex: Integer): AnsiString;
+    function Field(nFieldIndex: Integer): string;
     function FieldAsInteger(nFieldIndex: Integer): Integer;
     procedure FieldToBuffer(nFieldIndex: Integer; pPtr: Pointer; nLength: Integer);
 
-    function FieldByName(sFieldName: AnsiString): AnsiString;
-    function FieldByNameAsInteger(sFieldName: AnsiString): Integer;
-    procedure FieldByNameToBuffer(sFieldName: AnsiString; pPtr: Pointer; nLength: Integer);
+    function FieldByName(sFieldName: String): String;
+
+    function FieldByNameAsInteger(sFieldName: string): Integer;
+    procedure FieldByNameToBuffer(sFieldName: string; pPtr: Pointer; nLength: Integer);
 
     property Count: Integer read m_RowCount;
     property FieldCount: Integer read m_FieldCount;
@@ -65,80 +67,87 @@ type
   end;
 
   //发生错误的回调函数 通过 SetErrorProc 绑定一个回调函数 当出现错误可以立马打印出来
-  TMySqlErrorFunction = procedure(sText: AnsiString; nType: Integer);
+  TMySqlErrorFunction = procedure(sText: String; nType: Integer);
 
   TMySql = class
   private
     m_Mysql: PMYSQL;
     m_MysqlRes: PMYSQL_RES;
     m_QueryResult: TMysqlRow;
-    m_sCharSet: AnsiString;
-    m_sDataBase: AnsiString;
-    m_sClientVer: AnsiString;
-    m_sServerVer: AnsiString; //服务端DB使用的版本
-    m_sErrorDesc: AnsiString; //错误描述
-    m_sQueryErrorText: AnsiString; //上一次执行 Query 或者 Exec 类的Sql指令
-    procedure SetCharSet(const Value: AnsiString);
+    m_sCharSet: String;
+    m_sDataBase: String;
+    m_sClientVer: String;
+    m_sServerVer: String; //服务端DB使用的版本
+    m_sErrorDesc: String; //错误描述
+    m_sQueryErrorText: String; //上一次执行 Query 或者 Exec 类的Sql指令
+    procedure SetCharSet(const Value: String);
     procedure OnAfterQuery(nError: integer);
     function OnAfterExec(nError: integer): Integer; //返回值 为影响行数
     procedure RaiseError(nError: Integer; nType: Integer = 0); overload;
-    procedure RaiseError(sDesc: AnsiString; nType: Integer = 0); overload;
+    procedure RaiseError(sDesc: string; nType: Integer = 0); overload;
     function isConnectd(): Boolean;
-    function RealQuery(SqlText: PAnsiChar; boNeedResult: Boolean; var nAffectRow: Integer): Integer; //执行查询
+    function RealQuery(SqlText: String; boNeedResult: Boolean; var nAffectRow: Integer): Integer; //执行查询
   protected
 
   public
     constructor Create();
     destructor Destroy(); override;
+
     //获取所有的数据库
 
     function GetAllDataBase(var DataBaseList: TStrings): Boolean;
 
     //获取某个DB的所有表
-    function GetAllTable(const DBName: AnsiString; var DataBaseList: TStrings): Boolean;
+    function GetAllTable(const DBName: string; var DataBaseList: TStrings): Boolean;
 
     //连接服务器
-    function Connect(host, user, passwd, db: AnsiString; port: LongInt = 3306): Boolean;
+    function Connect(const Host:String; Port :Integer; const UserName, Password, DataBase: String):Boolean;
 
     procedure Close(); //关闭与 Mysql 的连接
 
     //执行Query SQL语句
-    function Query(SqlText: AnsiString): Boolean; //返回是否执行成功
+    function Query(const SqlText: string): Boolean; //返回是否执行成功
 
     //执行 SQL语句
-    function Exec(SqlText: AnsiString): Integer; //返回作用的行数
+    function Exec(const SqlText: string): Integer; //返回作用的行数
 
    (* Query 和 Exec 的区别在于 一个需要 返回结果集 一个不需要返回结果集 *)
    (* 但是同样的 当查询完毕 都需要执行 ResetQuery 释放资源 *)
 
     procedure ResetQuery(); //重置查询释放资源
 
-    function SetDataBase(const Value: AnsiString): Boolean; //修改DB连接
+    function SetDataBase(const Value: string): Boolean; //修改DB连接
     property CharSet: string read m_sCharSet write SetCharSet; //设置字符集
 
     property ClientVer: string read m_sClientVer;
     property ServerVer: string read m_sServerVer;
     property Connected: Boolean read isConnectd;
     property ResultRow: TMysqlRow read m_QueryResult; //得到查询后的返回 这个对象会自动管理
-    property ErrorDesc: AnsiString read m_sErrorDesc;
+    property ErrorDesc: string read m_sErrorDesc;
 
+   public
+    class procedure SetErrorProc(proc: TMySqlErrorFunction);
   end;
 
-procedure SetErrorProc(proc: TMySqlErrorFunction);
+
 
 implementation
 
 var
   g_ProcError: TMySqlErrorFunction; //错误输出函数
-  g_arrFieldData: array of TMYSQL_FIELD; //存储Mysql 的字段属性的数组
+  //g_arrFieldData: array of TMYSQL_FIELD; //存储Mysql 的字段属性的数组
 
-procedure SetErrorProc(proc: TMySqlErrorFunction);
+class procedure TMySql.SetErrorProc(proc: TMySqlErrorFunction);
 begin
   g_ProcError := proc;
 end;
 
-function TMySql.Connect(host, user, passwd, db: AnsiString;
-  port: LongInt): Boolean;
+function _String(const PStr:PAnsiChar):String;
+begin
+  Result := string(AnsiString(PStr));
+end;
+
+function TMySql.Connect(const Host:String; Port :Integer; const UserName, Password, DataBase: String): Boolean;
 var
   PDBName: PAnsiChar;
   ConFlag: LongWord;
@@ -154,9 +163,9 @@ begin
     Exit;
   end;
 
-  if db <> '' then
+  if DataBase <> '' then
   begin
-    PDBName := PAnsiChar(db);
+    PDBName := PAnsiChar(AnsiString(DataBase));
   end else
   begin
     PDBName := nil;
@@ -165,16 +174,16 @@ begin
   //如果flag 设置为 0 的话 执行 存储过程是不会返回结果集的
   ConFlag := CLIENT_FOUND_ROWS or CLIENT_MULTI_RESULTS;
 
-  if mysql_real_connect(m_Mysql, PAnsiChar(host), PAnsiChar(user), PAnsiChar(passwd), PDBName, port, nil, ConFlag) = nil then
+ if mysql_real_connect(m_Mysql, PAnsiChar(AnsiString(host)), PAnsiChar(AnsiString(UserName)), PAnsiChar(AnsiString(Password)), PDBName, port, nil, ConFlag) = nil then
   begin
     RaiseError(0);
     Exit;
   end;
 
   Result := True;
-  m_sDataBase := db;
-  m_sServerVer := mysql_get_server_info(m_Mysql);
-  m_sCharSet := mysql_character_set_name(m_Mysql);
+  m_sDataBase := DataBase;
+  m_sServerVer := _String((mysql_get_server_info(m_Mysql)));
+  m_sCharSet := _String(mysql_character_set_name(m_Mysql));
 
 end;
 
@@ -182,7 +191,7 @@ constructor TMySql.Create;
 begin
   //加载动态库以及获得客户端版本信息
   try
-    m_sClientVer := mysql_get_client_info;
+    m_sClientVer := _String(mysql_get_client_info);
     m_sDataBase := '';
   except
     on E: Exception do
@@ -199,9 +208,7 @@ begin
   m_QueryResult := TMysqlRow(TMysqlRow.NewInstance()); //创建对象 但是不执行Create 函数 去初始对象
   with m_QueryResult do
   begin
-    m_FieldIndexList := TStringList.Create;
-    m_FieldIndexList.CaseSensitive := False;
-    m_FieldIndexList.Sorted := True;
+
   end;
 
 end;
@@ -256,22 +263,22 @@ begin
   end;
 end;
 
-function TMySql.Query(SqlText: AnsiString): Boolean;
+function TMySql.Query(const SqlText: string): Boolean;
 var
   nCount: Integer;
 begin
-  result := RealQuery(PAnsiChar(SqlText), true, nCount) = 0;
+  result := RealQuery(SqlText, true, nCount) = 0;
 end;
 
 procedure TMySql.RaiseError(nError: Integer; nType: Integer = 0);
 var
-  sError: Ansistring;
+  sError: String;
 begin
-  sError := mysql_error(m_Mysql);
+  sError := string(mysql_error(m_Mysql));
   RaiseError(sError);
 end;
 
-procedure TMySql.RaiseError(sDesc: AnsiString; nType: Integer = 0);
+procedure TMySql.RaiseError(sDesc: string; nType: Integer = 0);
 begin
   m_sErrorDesc := sDesc;
   if Assigned(g_ProcError) then
@@ -282,10 +289,10 @@ end;
 
 //执行 boNeedResult 是否需要返回结果集 如果是 select 则需要  如果是Updata 这种则只需要返回作用的行数
 
-function TMySql.RealQuery(SqlText: PAnsiChar; boNeedResult: Boolean; var nAffectRow: Integer): Integer;
+function TMySql.RealQuery(SqlText: String; boNeedResult: Boolean; var nAffectRow: Integer): Integer;
 begin
 
-  Result := mysql_real_query(m_Mysql, SqlText, Length(SqlText));
+  Result := mysql_real_query(m_Mysql, PAnsiChar(AnsiString(SqlText)), Length(SqlText));
 
   if Result <> 0 then
   begin
@@ -319,11 +326,11 @@ begin
 
 end;
 
-procedure TMySql.SetCharSet(const Value: Ansistring);
+procedure TMySql.SetCharSet(const Value: string);
 var
   nError: Integer;
 begin
-  nError := mysql_set_character_set(m_Mysql, PAnsiChar(Value));
+  nError := mysql_set_character_set(m_Mysql, PAnsiChar(AnsiString(Value)));
   if nError = 0 then
   begin
     m_sCharSet := Value;
@@ -345,11 +352,11 @@ begin
 
 end;
 
-function TMySql.SetDataBase(const Value: Ansistring): Boolean;
+function TMySql.SetDataBase(const Value: string): Boolean;
 var
   nError: Integer;
 begin
-  nError := mysql_select_db(m_Mysql, PAnsiChar(Value));
+  nError := mysql_select_db(m_Mysql, PAnsiChar(AnsiString(Value)));
   if nError = 0 then
   begin
     m_sDataBase := Value;
@@ -360,7 +367,6 @@ begin
     Result := False;
   end;
 end;
-
 
 function TMySql.GetAllDataBase(var DataBaseList: TStrings): Boolean;
 var
@@ -398,14 +404,14 @@ begin
   result := True;
 end;
 
-function TMySql.GetAllTable(const DBName: AnsiString;
+function TMySql.GetAllTable(const DBName: string;
   var DataBaseList: TStrings): Boolean;
 var
   I, nError: Integer;
 
 begin
   Result := False;
-  nError := mysql_select_db(m_Mysql, PAnsiChar(DBName));
+  nError := mysql_select_db(m_Mysql, PAnsiChar(AnsiString((DBName))));
 
   if nError <> 0 then
   begin
@@ -449,9 +455,9 @@ begin
   inherited;
 end;
 
-function TMySql.Exec(SqlText: AnsiString): Integer;
+function TMySql.Exec(const SqlText: string): Integer;
 begin
-  RealQuery(PAnsiChar(SqlText), false, Result);
+  RealQuery(SqlText, false, Result);
 end;
 
 { TMysqlRow }
@@ -498,7 +504,7 @@ begin
     begin
       pField := mysql_fetch_field(m_pMysqlRes);
       Field := UpdateField(pField);
-      m_FieldIndexList.AddObject(Field.name, TObject(I));
+      m_FieldIndexList.AddOrSetValue(_string(Field.name),i);
     end;
 
   end;
@@ -555,7 +561,7 @@ begin
   end;
 end;
 
-function TMysqlRow.Field(nFieldIndex: Integer): AnsiString;
+function TMysqlRow.Field(nFieldIndex: Integer): string;
 var
   P: PAnsiChar;
 begin
@@ -563,7 +569,7 @@ begin
 
   if P <> nil then
   begin
-    Result := AnsiString(P);
+    Result := _String(P);
   end else
   begin
     Result := '';
@@ -578,16 +584,12 @@ end;
 
 
 
-function TMysqlRow.FieldByName(sFieldName: AnsiString): AnsiString;
+function TMysqlRow.FieldByName(sFieldName: String): String;
 var
   nIndex: Integer;
 begin
-
-  nIndex := FieldIndex(sFieldName);
-
-  if nIndex >= 0 then
+  if m_FieldIndexList.TryGetValue(sFieldName,nIndex) then
   begin
-    nIndex := Integer(m_FieldIndexList.Objects[nIndex]);
     Result := Field(nIndex);
   end else
   begin
@@ -596,12 +598,12 @@ begin
 
 end;
 
-function TMysqlRow.FieldByNameAsInteger(sFieldName: AnsiString): Integer;
+function TMysqlRow.FieldByNameAsInteger(sFieldName: string): Integer;
 begin
   Result := StrToIntDef(FieldByName(sFieldName), 0);
 end;
 
-procedure TMysqlRow.FieldByNameToBuffer(sFieldName: AnsiString; pPtr: Pointer;
+procedure TMysqlRow.FieldByNameToBuffer(sFieldName: string; pPtr: Pointer;
   nLength: Integer);
 var
   nIndex: Integer;
@@ -615,13 +617,15 @@ begin
 
 end;
 
-function TMysqlRow.FieldIndex(sName: AnsiString): Integer;
+function TMysqlRow.FieldIndex(sName: String): Integer;
 begin
+  Result := -1;
   if m_FieldIndexList.Count <> m_FieldCount then
   begin
     FieldNameList();
   end;
-  Result := m_FieldIndexList.IndexOf(sName);
+
+  m_FieldIndexList.TryGetValue(sName,Result);
 end;
 
 function TMysqlRow.FetchResRow: Boolean;
