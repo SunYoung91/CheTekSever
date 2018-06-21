@@ -22,13 +22,15 @@ implementation
 constructor TDoubleDict<TKey, TValue>.Create(ACapacity: Integer);
 begin
   inherited Create(ACapacity);
+  OnKeyNotify := KeyEvent;
+  OnValueNotify := ValueEvent;
   VKDict := TDictionary<TValue,TKey>.Create(ACapacity);
 end;
 
 destructor TDoubleDict<TKey, TValue>.Destroy;
 begin
-  VKDict.Free;
   inherited;
+  VKDict.Free;
 end;
 
 function TDoubleDict<TKey, TValue>.TryGetKeyByValue(const Value: TValue;

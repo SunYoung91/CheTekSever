@@ -1,8 +1,8 @@
-(**)
-(* delphi Mysql ²Ù×÷¼òµ¥·â×° ĞèÒª libmysql.dll *)
+ï»¿(**)
+(* delphi Mysql æ“ä½œç®€å•å°è£… éœ€è¦ libmysql.dll *)
 (* date : 2015/11/4*)
-(* author : Ò»Â·ËæÔÆ qq:531662161)
-(* ²Î¿¼: http://www.cnblogs.com/doorsky/archive/2010/01/05/1639980.html *)
+(* author : ä¸€è·¯éšäº‘ qq:531662161)
+(* å‚è€ƒ: http://www.cnblogs.com/doorsky/archive/2010/01/05/1639980.html *)
 
 
 unit CheTek.MySql;
@@ -10,66 +10,68 @@ unit CheTek.MySql;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes,System.Generics.Collections,
+  Windows, Messages, SysUtils, Classes,System.Generics.Collections,CheTek.BaseObject,
   Mysql;
 type
 
-  //½øĞĞ²éÑ¯ºó·µ»ØµÄ½á¹û¼¯
+  TMysql = class;
+  //è¿›è¡ŒæŸ¥è¯¢åè¿”å›çš„ç»“æœé›†
   TMysqlRow = class
   private
-    m_FieldCount: Integer; //²éÑ¯¼ÇÂ¼¼¯µÄÁĞÊı
 
-    m_RowCount: Integer; //²éÑ¯¼ÇÂ¼¼¯µÄĞĞÊı
+    m_Owner : TMysql;
 
-    m_pMysqlRes: PMYSQL_RES; //·µ»ØÔ­Ê¼½á¹û¼¯
+    m_FieldCount: Integer; //æŸ¥è¯¢è®°å½•é›†çš„åˆ—æ•°
 
-    m_pRows: PMYSQL_ROW; //Mysql ·µ»Ø½á¹û¼¯
+    m_RowCount: Integer; //æŸ¥è¯¢è®°å½•é›†çš„è¡Œæ•°
 
-    m_nRowIndex: Integer; //µ±Ç°ĞĞË÷Òı
+    m_pMysqlRes: PMYSQL_RES; //è¿”å›åŸå§‹ç»“æœé›†
 
-    m_nFieldIndex: Integer; //µ±Ç°ÁĞË÷Òı
+    m_pRows: PMYSQL_ROW; //Mysql è¿”å›ç»“æœé›†
 
-    m_FieldIndexList: TDictionary<String,Integer>; //×Ö¶ÎÃû³Æ¶ÔÓ¦µÄIndex ÓÃÀ´ÊµÏÖFieldByName()
+    m_nRowIndex: Integer; //å½“å‰è¡Œç´¢å¼•
 
-    procedure SetEmpty(); //ÉèÖÃÎª½á¹û¼¯Îª¿Õ
+    m_nFieldIndex: Integer; //å½“å‰åˆ—ç´¢å¼•
+
+    m_FieldIndexList: TDictionary<String,Integer>; //å­—æ®µåç§°å¯¹åº”çš„Index ç”¨æ¥å®ç°FieldByName()
+
+    procedure SetEmpty(); //è®¾ç½®ä¸ºç»“æœé›†ä¸ºç©º
 
     procedure FieldNameList();
 
-    function FetchResRow(): Boolean; //ÕûÀí×ÊÔ´
+    function FetchResRow(): Boolean; //æ•´ç†èµ„æº
 
-    procedure CleanUp(); //ÇåÀí×ÊÔ´
+    procedure CleanUp(); //æ¸…ç†èµ„æº
 
-    function FieldIndex(sName: String): Integer; //¸ù¾İ×Ö¶ÎÃû »ñÈ¡×Ö¶ÎÃûµÄÏÂ±ê
+    function FieldIndex(sName: String): Integer; //æ ¹æ®å­—æ®µå è·å–å­—æ®µåçš„ä¸‹æ ‡
 
-    destructor Destroy; override; //ÕâÒ»ĞĞ»á ±¨ H2269 µÄÌáÊ¾ ºöÂÔËû
+    destructor Destroy; override; //è¿™ä¸€è¡Œä¼š æŠ¥ H2269 çš„æç¤º å¿½ç•¥ä»–
   public
 
-    constructor Create; //Èç¹û³¢ÊÔ ÊÖ¶¯Create Ó¦µ±Á¢Âí±¨´í
-    destructor free; //Èç¹û³¢ÊÔ ÊÖ¶¯Free Ó¦¸ÃÁ¢¼´±¨´í
-    function EOF: Boolean; //µ±Ç°ÊÇ·ñÒÑ¾­µ½Êı¾İ¼¯Î²²¿ÁË(ÎŞ·¨¼ÌĞø¶ÁÈ¡)
+    constructor Create; //å¦‚æœå°è¯• æ‰‹åŠ¨Create åº”å½“ç«‹é©¬æŠ¥é”™
+    destructor free; //å¦‚æœå°è¯• æ‰‹åŠ¨Free åº”è¯¥ç«‹å³æŠ¥é”™
+    function EOF: Boolean; //å½“å‰æ˜¯å¦å·²ç»åˆ°æ•°æ®é›†å°¾éƒ¨äº†(æ— æ³•ç»§ç»­è¯»å–)
 
-    procedure First; //ÒÆ¶¯µ½ĞĞÊ×
+    procedure First; //ç§»åŠ¨åˆ°è¡Œé¦–
 
-    procedure Next; //ÒÆ¶¯µ½ÏÂÒ»ĞĞ
-    function FieldAsPointer(nFieldIndex: Integer): PAnsiChar;
-    function Field(nFieldIndex: Integer): string;
-    function FieldAsInteger(nFieldIndex: Integer): Integer;
-    procedure FieldToBuffer(nFieldIndex: Integer; pPtr: Pointer; nLength: Integer);
-
-    function FieldByName(sFieldName: String): String;
-
-    function FieldByNameAsInteger(sFieldName: string): Integer;
-    procedure FieldByNameToBuffer(sFieldName: string; pPtr: Pointer; nLength: Integer);
-
+    procedure Next; //ç§»åŠ¨åˆ°ä¸‹ä¸€è¡Œ
+    function FieldAsPointer(FieldIndex: Integer; out Ptr:PAnsiChar):Boolean;
+    function Field(FieldIndex: Integer ; out Value:String):Boolean;
+    function FieldAsInteger(FieldIndex: Integer ;out Value : Int64):Boolean;
+    function FieldToBuffer(FieldIndex: Integer; pPtr: Pointer; nLength: Integer):Boolean;
+    function FieldByName(const FieldName: String ;out Value:String): Boolean;
+    function FieldByNameAsInteger(const FieldName: string ; out Value:Int64):Boolean;overload;
+    function FieldByNameAsInteger(const FieldName: string ):Int64;overload;
+    function FieldByNameToBuffer(const FieldName: string; pPtr: Pointer; nLength: Integer):Boolean;
     property Count: Integer read m_RowCount;
     property FieldCount: Integer read m_FieldCount;
 
   end;
 
-  //·¢Éú´íÎóµÄ»Øµ÷º¯Êı Í¨¹ı SetErrorProc °ó¶¨Ò»¸ö»Øµ÷º¯Êı µ±³öÏÖ´íÎó¿ÉÒÔÁ¢Âí´òÓ¡³öÀ´
+  //å‘ç”Ÿé”™è¯¯çš„å›è°ƒå‡½æ•° é€šè¿‡ SetErrorProc ç»‘å®šä¸€ä¸ªå›è°ƒå‡½æ•° å½“å‡ºç°é”™è¯¯å¯ä»¥ç«‹é©¬æ‰“å°å‡ºæ¥
   TMySqlErrorFunction = procedure(sText: String; nType: Integer);
 
-  TMySql = class
+  TMySql = class(TBaseObject)
   private
     m_Mysql: PMYSQL;
     m_MysqlRes: PMYSQL_RES;
@@ -77,52 +79,54 @@ type
     m_sCharSet: String;
     m_sDataBase: String;
     m_sClientVer: String;
-    m_sServerVer: String; //·şÎñ¶ËDBÊ¹ÓÃµÄ°æ±¾
-    m_sErrorDesc: String; //´íÎóÃèÊö
-    m_sQueryErrorText: String; //ÉÏÒ»´ÎÖ´ĞĞ Query »òÕß Exec ÀàµÄSqlÖ¸Áî
+    m_sServerVer: String; //æœåŠ¡ç«¯DBä½¿ç”¨çš„ç‰ˆæœ¬
+    m_sErrorDesc: String; //é”™è¯¯æè¿°
+    m_sQueryErrorText: String; //ä¸Šä¸€æ¬¡æ‰§è¡Œ Query æˆ–è€… Exec ç±»çš„SqlæŒ‡ä»¤
+    m_boIsUtf8ChrSet:Boolean;//æ˜¯å¦utf8ç¼–ç 
     procedure SetCharSet(const Value: String);
     procedure OnAfterQuery(nError: integer);
-    function OnAfterExec(nError: integer): Integer; //·µ»ØÖµ ÎªÓ°ÏìĞĞÊı
+    function OnAfterExec(nError: integer): Integer; //è¿”å›å€¼ ä¸ºå½±å“è¡Œæ•°
     procedure RaiseError(nError: Integer; nType: Integer = 0); overload;
     procedure RaiseError(sDesc: string; nType: Integer = 0); overload;
     function isConnectd(): Boolean;
-    function RealQuery(SqlText: String; boNeedResult: Boolean; var nAffectRow: Integer): Integer; //Ö´ĞĞ²éÑ¯
+    function RealQuery(SqlText: String; boNeedResult: Boolean; var nAffectRow: Integer): Integer; //æ‰§è¡ŒæŸ¥è¯¢
   protected
 
   public
     constructor Create();
     destructor Destroy(); override;
 
-    //»ñÈ¡ËùÓĞµÄÊı¾İ¿â
+    //è·å–æ‰€æœ‰çš„æ•°æ®åº“
 
     function GetAllDataBase(var DataBaseList: TStrings): Boolean;
 
-    //»ñÈ¡Ä³¸öDBµÄËùÓĞ±í
+    //è·å–æŸä¸ªDBçš„æ‰€æœ‰è¡¨
     function GetAllTable(const DBName: string; var DataBaseList: TStrings): Boolean;
 
-    //Á¬½Ó·şÎñÆ÷
-    function Connect(const Host:String; Port :Integer; const UserName, Password, DataBase: String):Boolean;
+    //è¿æ¥æœåŠ¡å™¨
+    function Connect(const Host:String; Port :Integer; const UserName, Password : String; const DataBase: String = ''):Boolean;
 
-    procedure Close(); //¹Ø±ÕÓë Mysql µÄÁ¬½Ó
+    function GetCreateTableSql(const TableName :String ; var Str:TStrings):Boolean;
 
-    //Ö´ĞĞQuery SQLÓï¾ä
-    function Query(const SqlText: string): Boolean; //·µ»ØÊÇ·ñÖ´ĞĞ³É¹¦
+    procedure Close(); //å…³é—­ä¸ Mysql çš„è¿æ¥
 
-    //Ö´ĞĞ SQLÓï¾ä
-    function Exec(const SqlText: string): Integer; //·µ»Ø×÷ÓÃµÄĞĞÊı
+    //æ‰§è¡ŒQuery SQLè¯­å¥
+    function Query(const SqlText: string): Boolean; //è¿”å›æ˜¯å¦æ‰§è¡ŒæˆåŠŸ
 
-   (* Query ºÍ Exec µÄÇø±ğÔÚÓÚ Ò»¸öĞèÒª ·µ»Ø½á¹û¼¯ Ò»¸ö²»ĞèÒª·µ»Ø½á¹û¼¯ *)
-   (* µ«ÊÇÍ¬ÑùµÄ µ±²éÑ¯Íê±Ï ¶¼ĞèÒªÖ´ĞĞ ResetQuery ÊÍ·Å×ÊÔ´ *)
+    //æ‰§è¡Œ SQLè¯­å¥
+    function Exec(const SqlText: string): Integer; //è¿”å›ä½œç”¨çš„è¡Œæ•°
 
-    procedure ResetQuery(); //ÖØÖÃ²éÑ¯ÊÍ·Å×ÊÔ´
+   (* Query å’Œ Exec çš„åŒºåˆ«åœ¨äº ä¸€ä¸ªéœ€è¦ è¿”å›ç»“æœé›† ä¸€ä¸ªä¸éœ€è¦è¿”å›ç»“æœé›† *)
+   (* ä½†æ˜¯åŒæ ·çš„ å½“æŸ¥è¯¢å®Œæ¯• éƒ½éœ€è¦æ‰§è¡Œ ResetQuery é‡Šæ”¾èµ„æº *)
 
-    function SetDataBase(const Value: string): Boolean; //ĞŞ¸ÄDBÁ¬½Ó
-    property CharSet: string read m_sCharSet write SetCharSet; //ÉèÖÃ×Ö·û¼¯
+    procedure ResetQuery(); //é‡ç½®æŸ¥è¯¢é‡Šæ”¾èµ„æº
 
+    function SetDataBase(const Value: string): Boolean; //ä¿®æ”¹DBè¿æ¥
+    property CharSet: string read m_sCharSet write SetCharSet; //è®¾ç½®å­—ç¬¦é›†
     property ClientVer: string read m_sClientVer;
     property ServerVer: string read m_sServerVer;
     property Connected: Boolean read isConnectd;
-    property ResultRow: TMysqlRow read m_QueryResult; //µÃµ½²éÑ¯ºóµÄ·µ»Ø Õâ¸ö¶ÔÏó»á×Ô¶¯¹ÜÀí
+    property ResultRow: TMysqlRow read m_QueryResult; //å¾—åˆ°æŸ¥è¯¢åçš„è¿”å› è¿™ä¸ªå¯¹è±¡ä¼šè‡ªåŠ¨ç®¡ç†
     property ErrorDesc: string read m_sErrorDesc;
 
    public
@@ -134,12 +138,32 @@ type
 implementation
 
 var
-  g_ProcError: TMySqlErrorFunction; //´íÎóÊä³öº¯Êı
-  //g_arrFieldData: array of TMYSQL_FIELD; //´æ´¢Mysql µÄ×Ö¶ÎÊôĞÔµÄÊı×é
+  g_ProcError: TMySqlErrorFunction; //é”™è¯¯è¾“å‡ºå‡½æ•°
+  //g_arrFieldData: array of TMYSQL_FIELD; //å­˜å‚¨Mysql çš„å­—æ®µå±æ€§çš„æ•°ç»„
 
 class procedure TMySql.SetErrorProc(proc: TMySqlErrorFunction);
 begin
   g_ProcError := proc;
+end;
+
+function TMySql.GetCreateTableSql(const TableName :String; var Str: TStrings):Boolean;
+var
+  Sql ,TableText : String;
+begin
+  Result := False;
+  Sql := Format('SHOW CREATE TABLE `%s`',[TableName]);
+  if Query(Sql) then
+  begin
+    if ResultRow.Count > 0 then
+    begin
+      ResultRow.First();
+      if ResultRow.FieldByName('Create Table',TableText) then
+      begin
+        Str.Text := TableText;
+      end;
+      Result := True;
+    end;
+  end;
 end;
 
 function _String(const PStr:PAnsiChar):String;
@@ -153,7 +177,7 @@ var
   ConFlag: LongWord;
 begin
   Result := false;
-  Close(); //ÏÈ¼ì²éÊÇ·ñĞèÒª¹Ø±ÕÁ¬½Ó
+  Close(); //å…ˆæ£€æŸ¥æ˜¯å¦éœ€è¦å…³é—­è¿æ¥
 
   m_Mysql := mysql_init(nil);
 
@@ -171,7 +195,7 @@ begin
     PDBName := nil;
   end;
 
-  //Èç¹ûflag ÉèÖÃÎª 0 µÄ»° Ö´ĞĞ ´æ´¢¹ı³ÌÊÇ²»»á·µ»Ø½á¹û¼¯µÄ
+  //å¦‚æœflag è®¾ç½®ä¸º 0 çš„è¯ æ‰§è¡Œ å­˜å‚¨è¿‡ç¨‹æ˜¯ä¸ä¼šè¿”å›ç»“æœé›†çš„
   ConFlag := CLIENT_FOUND_ROWS or CLIENT_MULTI_RESULTS;
 
  if mysql_real_connect(m_Mysql, PAnsiChar(AnsiString(host)), PAnsiChar(AnsiString(UserName)), PAnsiChar(AnsiString(Password)), PDBName, port, nil, ConFlag) = nil then
@@ -189,7 +213,7 @@ end;
 
 constructor TMySql.Create;
 begin
-  //¼ÓÔØ¶¯Ì¬¿âÒÔ¼°»ñµÃ¿Í»§¶Ë°æ±¾ĞÅÏ¢
+  //åŠ è½½åŠ¨æ€åº“ä»¥åŠè·å¾—å®¢æˆ·ç«¯ç‰ˆæœ¬ä¿¡æ¯
   try
     m_sClientVer := _String(mysql_get_client_info);
     m_sDataBase := '';
@@ -205,10 +229,10 @@ begin
 
  // m_QueryResult := TMysqlRow.Create; 
 
-  m_QueryResult := TMysqlRow(TMysqlRow.NewInstance()); //´´½¨¶ÔÏó µ«ÊÇ²»Ö´ĞĞCreate º¯Êı È¥³õÊ¼¶ÔÏó
+  m_QueryResult := TMysqlRow(TMysqlRow.NewInstance()); //åˆ›å»ºå¯¹è±¡ ä½†æ˜¯ä¸æ‰§è¡ŒCreate å‡½æ•° å»åˆå§‹å¯¹è±¡
   with m_QueryResult do
   begin
-
+    m_QueryResult.m_Owner := Self;
   end;
 
 end;
@@ -248,14 +272,13 @@ procedure TMySql.OnAfterQuery(nError: integer);
 begin
   if nError = 0 then
   begin
-    //»ñµÃ½á¹û
+    //è·å¾—ç»“æœ
     m_QueryResult.m_pMysqlRes := mysql_store_result(m_Mysql);
     if not m_QueryResult.FetchResRow() then
     begin
       m_QueryResult.SetEmpty();
       RaiseError(nError);
     end;
-
   end else
   begin
     m_MysqlRes := nil;
@@ -287,12 +310,21 @@ begin
   end;
 end;
 
-//Ö´ĞĞ boNeedResult ÊÇ·ñĞèÒª·µ»Ø½á¹û¼¯ Èç¹ûÊÇ select ÔòĞèÒª  Èç¹ûÊÇUpdata ÕâÖÖÔòÖ»ĞèÒª·µ»Ø×÷ÓÃµÄĞĞÊı
+//æ‰§è¡Œ boNeedResult æ˜¯å¦éœ€è¦è¿”å›ç»“æœé›† å¦‚æœæ˜¯ select åˆ™éœ€è¦  å¦‚æœæ˜¯Updata è¿™ç§åˆ™åªéœ€è¦è¿”å›ä½œç”¨çš„è¡Œæ•°
 
 function TMySql.RealQuery(SqlText: String; boNeedResult: Boolean; var nAffectRow: Integer): Integer;
+var
+  Utf8:AnsiString;
 begin
 
-  Result := mysql_real_query(m_Mysql, PAnsiChar(AnsiString(SqlText)), Length(SqlText));
+  if m_boIsUtf8ChrSet then
+  begin
+    Utf8 := UTF8Encode(SqlText);
+    Result := mysql_real_query(m_Mysql, PAnsiChar(Utf8), Length(Utf8));
+  end else
+  begin
+    Result := mysql_real_query(m_Mysql, PAnsiChar(AnsiString(SqlText)), Length(SqlText));
+  end;
 
   if Result <> 0 then
   begin
@@ -315,7 +347,7 @@ begin
   if m_Mysql <> nil then
   begin
     m_QueryResult.CleanUp();
-     //Çå¿Õ¶Ô DB µÄ ¶à¸ö²éÑ¯½á¹û¡£ÒÔ·ÀÍòÒ» µ«ÊÇÔÚÊµ¼Ê´úÂëÖĞ×îºÃ Ò»¸öQuery Ò»¸ö Reset
+     //æ¸…ç©ºå¯¹ DB çš„ å¤šä¸ªæŸ¥è¯¢ç»“æœã€‚ä»¥é˜²ä¸‡ä¸€ ä½†æ˜¯åœ¨å®é™…ä»£ç ä¸­æœ€å¥½ ä¸€ä¸ªQuery ä¸€ä¸ª Reset
     while (mysql_next_result(m_Mysql) = 0) do
     begin
 
@@ -334,6 +366,13 @@ begin
   if nError = 0 then
   begin
     m_sCharSet := Value;
+    if LowerCase(value) = 'utf8' then
+    begin
+      m_boIsUtf8ChrSet := True;
+    end else
+    begin
+      m_boIsUtf8ChrSet := False;
+    end;
   end else
   begin
     RaiseError(nError);
@@ -371,6 +410,7 @@ end;
 function TMySql.GetAllDataBase(var DataBaseList: TStrings): Boolean;
 var
   i: Integer;
+  DataBaseName:String;
 begin
 
   Result := False;
@@ -392,14 +432,15 @@ begin
   begin
     for I := 0 to m_QueryResult.Count - 1 do
     begin
-      DataBaseList.Add(m_QueryResult.Field(0));
+      if m_QueryResult.Field(0,DataBaseName) then
+      begin
+        DataBaseList.Add(DataBaseName);
+      end;
       m_QueryResult.Next;
     end;
 
     ResetQuery();
   end;
-
-
 
   result := True;
 end;
@@ -408,7 +449,7 @@ function TMySql.GetAllTable(const DBName: string;
   var DataBaseList: TStrings): Boolean;
 var
   I, nError: Integer;
-
+  TableName:string;
 begin
   Result := False;
   nError := mysql_select_db(m_Mysql, PAnsiChar(AnsiString((DBName))));
@@ -431,7 +472,12 @@ begin
     begin
       for i := 0 to m_QueryResult.Count - 1 do
       begin
-        DataBaseList.Add(m_QueryResult.Field(0));
+
+        if m_QueryResult.Field(0,TableName) then
+        begin
+          DataBaseList.Add(TableName);
+        end;
+
         m_QueryResult.Next();
       end;
     end;
@@ -448,8 +494,8 @@ destructor TMySql.Destroy;
 begin
   if Assigned(m_QueryResult) then
   begin
-    Close(); //¹Ø±ÕÁ¬½Ó
-    m_QueryResult.CleanUp(); //Çå¿Õ×ÊÔ´
+    Close(); //å…³é—­è¿æ¥
+    m_QueryResult.CleanUp(); //æ¸…ç©ºèµ„æº
     m_QueryResult.Destroy();
   end;
   inherited;
@@ -496,6 +542,11 @@ var
   i: Integer;
 begin
 
+  if m_FieldIndexList = nil then
+  begin
+    m_FieldIndexList := TDictionary<String,Integer>.Create;
+  end;
+
   m_FieldIndexList.Clear;
 
   if (m_pMysqlRes <> nil) and (m_FieldCount > 0) then
@@ -506,25 +557,24 @@ begin
       Field := UpdateField(pField);
       m_FieldIndexList.AddOrSetValue(_string(Field.name),i);
     end;
-
   end;
 end;
 
-procedure TMysqlRow.FieldToBuffer(nFieldIndex: Integer; pPtr: Pointer;
-  nLength: Integer);
+function TMysqlRow.FieldToBuffer(FieldIndex: Integer; pPtr: Pointer; nLength: Integer):Boolean;
 var
   P: PAnsiChar;
 begin
-  P := FieldAsPointer(nFieldIndex);
-  if P <> nil then
+  Result := False;
+  if FieldAsPointer(FieldIndex,P) then
   begin
     Move(P^, pPtr^, nLength);
+    Result := True;
   end;
 end;
 
 procedure TMysqlRow.First;
 begin
-  //Èç¹û ĞĞÊı ºÍ ÁĞÊı ²»Îª 0 Ôò²ÅĞèÒªÖØĞÂ seek
+  //å¦‚æœ è¡Œæ•° å’Œ åˆ—æ•° ä¸ä¸º 0 åˆ™æ‰éœ€è¦é‡æ–° seek
   if ((m_nRowIndex <> 0) or (m_nFieldIndex <> 0))
     and (m_pRows <> nil)
     and (m_pMysqlRes <> nil) then
@@ -550,71 +600,108 @@ begin
 end;
 
 
-function TMysqlRow.FieldAsPointer(nFieldIndex: Integer): PAnsiChar;
+function TMysqlRow.FieldAsPointer(FieldIndex: Integer;out Ptr:PAnsiChar):Boolean;
 begin
-  if (nFieldIndex < m_FieldCount) and (nFieldIndex >= 0) then
+  if (FieldIndex < m_FieldCount) and (FieldIndex >= 0) then
   begin
-    Result := m_pRows[nFieldIndex];
+    Ptr := m_pRows[FieldIndex];
+    Result := True;
   end else
   begin
-    Result := nil;
+    Ptr := nil;
+    Result:= False;
   end;
 end;
 
-function TMysqlRow.Field(nFieldIndex: Integer): string;
+function TMysqlRow.Field(FieldIndex: Integer ; Out Value:String): Boolean;
 var
   P: PAnsiChar;
 begin
-  P := FieldAsPointer(nFieldIndex);
 
-  if P <> nil then
+  if FieldAsPointer(FieldIndex,P) then
   begin
-    Result := _String(P);
+    if m_Owner.m_boIsUtf8ChrSet then
+      Value := UTF8ToString(AnsiString(P))
+    else
+      Value := _String(P);
+
+    Result := True;
   end else
   begin
-    Result := '';
+    Result := False;
   end;
 
 end;
 
-function TMysqlRow.FieldAsInteger(nFieldIndex: Integer): Integer;
+function TMysqlRow.FieldAsInteger(FieldIndex: Integer; out Value:Int64): Boolean;
+var
+  Str : String;
 begin
-  Result := StrToIntDef(Field(nFieldIndex), 0);
+  if Field(FieldIndex , Str) then
+  begin
+    Value := StrToInt64Def(Str,0);
+    Result := True;
+  end else
+  begin
+    Result := False;
+  end;
 end;
 
 
 
-function TMysqlRow.FieldByName(sFieldName: String): String;
+function TMysqlRow.FieldByName(const FieldName: String ; out Value:String): Boolean;
 var
-  nIndex: Integer;
+  Index: Integer;
 begin
-  if m_FieldIndexList.TryGetValue(sFieldName,nIndex) then
+  Result := False;
+  if m_FieldIndexList.TryGetValue(FieldName,Index) then
   begin
-    Result := Field(nIndex);
+     if Field(Index , Value) then
+     begin
+        Result := True;
+     end;
   end else
   begin
-    Result := '';
+    Result := False;
   end;
 
 end;
 
-function TMysqlRow.FieldByNameAsInteger(sFieldName: string): Integer;
+function TMysqlRow.FieldByNameAsInteger(const FieldName: string): Int64;
 begin
-  Result := StrToIntDef(FieldByName(sFieldName), 0);
+  Result := 0;
+  FieldByNameAsInteger(FieldName,Result);
 end;
 
-procedure TMysqlRow.FieldByNameToBuffer(sFieldName: string; pPtr: Pointer;
-  nLength: Integer);
+function TMysqlRow.FieldByNameAsInteger(const FieldName: string ; Out Value:Int64):Boolean;
+var
+  Str:String;
+begin
+  Result := False;
+  if FieldByName(FieldName,Str) then
+  begin
+    Value := StrToIntDef(FieldName,0);
+    Result := True;
+  end;
+
+end;
+
+function TMysqlRow.FieldByNameToBuffer(const FieldName: string; pPtr: Pointer;
+  nLength: Integer):Boolean;
 var
   nIndex: Integer;
 begin
-  nIndex := FieldIndex(sFieldName);
+  Result := False;
+  nIndex := FieldIndex(FieldName);
+
 
   if nIndex >= 0 then
   begin
-    FieldToBuffer(nIndex, pPtr, nLength);
+    if FieldToBuffer(nIndex, pPtr, nLength) then
+    begin
+      Result := True;
+    end;
   end;
-
 end;
 
 function TMysqlRow.FieldIndex(sName: String): Integer;
@@ -634,20 +721,22 @@ begin
 
   if m_pMysqlRes <> nil then
   begin
-    //ÒÆ¶¯ÓÎ±ê µ½ 0 0
+    //ç§»åŠ¨æ¸¸æ ‡ åˆ° 0 0
     mysql_data_seek(m_pMysqlRes, 0);
     mysql_field_seek(m_pMysqlRes, 0);
 
-    //¼ÇÂ¼ÊıÁ¿
+    //è®°å½•æ•°é‡
     m_FieldCount := mysql_num_fields(m_pMysqlRes);
     m_RowCount := mysql_num_rows(m_pMysqlRes);
 
-    //×ª»»
+    //è½¬æ¢
     m_pRows := mysql_fetch_row(m_pMysqlRes);
 
     if m_pRows <> nil then
       Result := True;
   end;
+
+  FieldNameList();
 end;
 
 procedure TMysqlRow.SetEmpty;

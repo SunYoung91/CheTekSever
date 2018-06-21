@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2018/06/12 20:53:02.000.872,=E:\CheTekSever\TestSample\MysqlTest\Unit2.pas</Transaction>
+    <Transaction>2018/06/12 20:53:16.000.222,E:\CheTekSever\TestSample\MysqlTest\CheTek.OOP.pas=E:\CheTekSever\TestSample\MysqlTest\Unit2.pas</Transaction>
+    <Transaction>2018/06/12 20:53:23.000.760,E:\CheTekSever\TestSample\MysqlTest\CheTek.BaseObject.pas=E:\CheTekSever\TestSample\MysqlTest\CheTek.OOP.pas</Transaction>
+    <Transaction>2018/06/12 20:53:31.000.376,E:\CheTekSever\CheTekCommon\CheTek.BaseObject.pas=E:\CheTekSever\TestSample\MysqlTest\CheTek.BaseObject.pas</Transaction>
+    <Transaction>2018/06/12 21:09:24.000.843,=E:\CheTekSever\CheTekCommon\CheTek.SerialObject.pas</Transaction>
+  </Transactions>
+</BorlandProject>

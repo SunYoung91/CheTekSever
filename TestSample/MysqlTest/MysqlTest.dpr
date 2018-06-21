@@ -5,7 +5,9 @@ uses
   Unit1 in 'Unit1.pas' {Form1},
   CheTek.Mysql in '..\..\mysql\CheTek.Mysql.pas',
   mysql in '..\..\mysql\mysql.pas',
-  CheTek.MysqlPool in '..\..\mysql\CheTek.MysqlPool.pas';
+  CheTek.MysqlPool in '..\..\mysql\CheTek.MysqlPool.pas',
+  CheTek.BaseObject in '..\..\CheTekCommon\CheTek.BaseObject.pas',
+  CheTek.SerialObject in '..\..\CheTekCommon\CheTek.SerialObject.pas';
 
 {$R *.res}
 

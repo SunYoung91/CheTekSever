@@ -1,20 +1,20 @@
-unit MysqlOP;
+Ôªøunit MysqlOP;
 
 interface
 uses System.SysUtils;
 type
-  TMysqlOP = (opNone,UpdateKey,AsJson,PrimaryKey,Unikey,IndexHash,IndexBTree);
+  TMysqlOP = (mopNone,mopUpdateKey,mopAsJson,mopPrimaryKey,mopUnikey,mopIndexHash,mopIndexBTree,mopJsonClass,mopUID,mopQueryAnd,mopQueryOr);
   TMysqlOPSets = set of TMysqlOP;
 
   TFieldCodeOp = (fcOpNone,fcOpIntToStr);
 function GetDelphiTypeOP(const DelphiOPType:String):TFieldCodeOp;
 function DelphiTypeToMysql(const DelphiType:String):string;
-function MySqlTypeToMysql(const MysqlType:String):String;
+//function MySqlTypeToMysql(const MysqlType:String):String;
 function GetMysqlOP(const Str:String ):TMysqlOP;
 implementation
 uses System.Generics.Collections , DoubleDict;
 var
-  DelphiToMysqlMap : TDoubleDict<String,String>;
+  DelphiToMysqlMap : TDictionary<String,String>;
   MySqlOPMap : TDictionary<string,TMysqlOP>;
   FieldCodeOpMap : TDictionary<string,TFieldCodeOp>;
 
@@ -24,11 +24,13 @@ begin
   DelphiToMysqlMap.TryGetValue(LowerCase(DelphiType),Result);
 end;
 
+{
 function MySqlTypeToMysql(const MysqlType:String):String;
 begin
   Result := '';
   DelphiToMysqlMap.TryGetKeyByValue(LowerCase(MysqlType),Result);
 end;
+}
 
 function GetDelphiTypeOP(const DelphiOPType:String):TFieldCodeOp;
 begin
@@ -38,40 +40,61 @@ end;
 
 procedure InitMap();
 begin
-  //Mysql ¿‡–Õ∂‘’’±Ì
-  DelphiToMysqlMap.Add('integer','int');
-  DelphiToMysqlMap.Add('int64','bigint');
-  DelphiToMysqlMap.Add('string','text');
-  DelphiToMysqlMap.Add('byte','tinyint');
-  DelphiToMysqlMap.Add('smallint','smallint');
+  //Mysql Á±ªÂûãÂØπÁÖßË°®
 
-  FieldCodeOpMap.Add('integer',fcOpIntToStr);
-  FieldCodeOpMap.Add('int64',fcOpIntToStr);
-  FieldCodeOpMap.Add('string',fcOpNone);
+  DelphiToMysqlMap.Add('byte','tinyint(4) unsigned');
+  DelphiToMysqlMap.Add('shortint','tinyint(4)');
+
+  DelphiToMysqlMap.Add('word','smallint(6) unsigned');
+  DelphiToMysqlMap.Add('smallint','smallint(6)');
+
+  DelphiToMysqlMap.Add('cardinal','int(11) unsigned');
+  DelphiToMysqlMap.Add('integer','int(11)');
+
+  DelphiToMysqlMap.Add('uint64','bigint(20) unsigned');
+  DelphiToMysqlMap.Add('int64','bigint(20)');
+
+  DelphiToMysqlMap.Add('string','text');
+
   FieldCodeOpMap.Add('byte',fcOpIntToStr);
+  FieldCodeOpMap.Add('shortint',fcOpIntToStr);
+
+  FieldCodeOpMap.Add('word',fcOpIntToStr);
   FieldCodeOpMap.Add('smallint',fcOpIntToStr);
 
-    //≤Ÿ◊˜øÿ÷∆∑˚∂®“Â
-  MySqlOPMap.Add('json',AsJson);  //∏√◊÷∂Œ÷¥–––Ú¡–∫≈µΩjson ‘Ÿ“‘◊÷∑˚¥Æ¥Ê¥¢
-  MySqlOPMap.Add('pkey',PrimaryKey);
-  MySqlOPMap.Add('ukey',Unikey);
-  MySqlOPMap.Add('updatekey',UpdateKey);
-  MySqlOPMap.Add('hash',IndexHash);
-  MySqlOPMap.Add('btree',IndexBTree);
+  FieldCodeOpMap.Add('integer',fcOpIntToStr);
+  FieldCodeOpMap.Add('cardinal',fcOpIntToStr);
+
+  FieldCodeOpMap.Add('uint64',fcOpIntToStr);
+  FieldCodeOpMap.Add('int64',fcOpIntToStr);
+
+  FieldCodeOpMap.Add('string',fcOpNone);
+
+
+    //Êìç‰ΩúÊéßÂà∂Á¨¶ÂÆö‰πâ
+  MySqlOPMap.Add('json',mopAsJson);  //ËØ•Â≠óÊÆµÊâßË°åÂ∫èÂàóÂè∑Âà∞json ÂÜç‰ª•Â≠óÁ¨¶‰∏≤Â≠òÂÇ®
+  MySqlOPMap.Add('pkey',mopPrimaryKey);
+  MySqlOPMap.Add('ukey',mopUnikey);
+  MySqlOPMap.Add('updatekey',mopUpdateKey);
+  MySqlOPMap.Add('hash',mopIndexHash);
+  MySqlOPMap.Add('btree',mopIndexBTree);
+  MySqlOPMap.Add('jsonclass',mopJsonClass);
+  MySqlOPMap.Add('uid',mopUID);
+  MySqlOPMap.Add('queryand',mopQueryAnd);
+  MySqlOPMap.Add('queryor',mopQueryOr);
+
 end;
-
-
 
 function GetMysqlOP(const Str:String ):TMysqlOP;
 begin
   if not MySqlOPMap.TryGetValue(Str,Result) then
   begin
-    Result := opNone;
+    Result := mopNone;
   end;
 end;
 
 initialization
-  DelphiToMysqlMap := TDoubleDict<String,String>.Create();
+  DelphiToMysqlMap := TDictionary<String,String>.Create();
   MySqlOPMap := TDictionary<string,TMysqlOP>.Create();
   FieldCodeOpMap := TDictionary<string,TFieldCodeOp>.Create();
   InitMap();
