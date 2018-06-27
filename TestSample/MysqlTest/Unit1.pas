@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls, IdBaseComponent, IdComponent,
-  IdTCPConnection, IdTCPClient, IdHTTP,CheTek.Mysql,StringUtils,CheTek.DBEngine,DB_Actor;
+  IdTCPConnection, IdTCPClient, IdHTTP,CheTek.Mysql,StringUtils,CheTek.DBEngine,DB_Actor,DB_Item,DB_Account,DBRecordBase;
 
 type
   TForm1 = class(TForm)
@@ -13,9 +13,13 @@ type
     btn3: TButton;
     btn_showCreateTable: TButton;
     btn_EngineStart: TButton;
+    btn_mysqlDateTime: TButton;
+    btn_insert: TButton;
     procedure btn3Click(Sender: TObject);
     procedure btn_showCreateTableClick(Sender: TObject);
     procedure btn_EngineStartClick(Sender: TObject);
+    procedure btn_mysqlDateTimeClick(Sender: TObject);
+    procedure btn_insertClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -86,8 +90,32 @@ var
 begin
   DataEngine := TDBEngine.Create('192.168.2.168',3306,'root','mima00544','liyun_mir');
   DataEngine.RegisterClass(TDBRecordOfActor);
+  DataEngine.RegisterClass(TDBRecordOfItem);
+  DataEngine.RegisterClass(TDBRecordOfAccount);
   DataEngine.Init;
-  DataEngine.Free;
+
+end;
+
+procedure TForm1.btn_insertClick(Sender: TObject);
+var
+  Item : TDBRecordOfActor;
+  Str:String;
+begin
+  Str := 'ÂèÂèÂðÓ´';
+  Str := #39 + Str + #39;
+  Item := TDBRecordOfActor.Create;
+  Item.ActorID := 12131321;
+  Item.Account := 'Äã¶®ÉÏÃæ';
+  Item.ActorName := 'abcdefg';
+  Item.Update;
+end;
+
+procedure TForm1.btn_mysqlDateTimeClick(Sender: TObject);
+var
+  DateTime : TDateTime;
+begin
+  DateTime := MysqlDateTimeStrToDateTime('2018-06-22 15:23:16');
+  mmo_Log.Lines.Add(FormatDateTime('YYYY_MM_DD_HH_NN_SS',DateTime));
 end;
 
 procedure TForm1.btn_showCreateTableClick(Sender: TObject);

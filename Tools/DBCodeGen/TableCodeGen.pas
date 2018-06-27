@@ -1,30 +1,8 @@
 ﻿unit TableCodeGen;
 
 interface
-uses MysqlOP,System.Generics.Collections,System.SysUtils,System.Classes,JclStrings,System.IOUtils;
-
-
-
+uses MysqlOP,System.Generics.Collections,System.SysUtils,System.Classes,JclStrings,System.IOUtils,FieldData,Utils,JclDateTime;
 type
-
-
-    TFieldData = class
-    private
-      FFieldName:String;
-      FDelphiType:String;
-      FMysqlOps : TMysqlOPSets;
-      FLength:Integer; //字段长度 对于 Text 做主键的话必须指定长度 这样的话就会变成varchar
-      FComment:String;//注释
-      FQueryAndGroup:Integer; //生成查询分组ID And 条件
-      FQueryOrGroup:Integer; //生成查询分组ID Query 条件
-    public
-      function GetDelphiFiledString():String;
-      function IsNeedQuote():Boolean; //需不需要用单引号 引起来
-      function CodeOfValueToString():String;
-      function IsUIDField():Boolean;
-      function GetUPDATEFieldCodeText():string;
-      function GetMysqlCloumnDesc():String;
-    end;
 
     TQueryGroup = Class
       GroupID:Integer;
@@ -38,7 +16,7 @@ type
     private
       FTableName:String;
       FFields : TObjectList<TFieldData>;
-      QueryGroups : TObjectList<TQueryGroup>;
+      FQueryGroups : TObjectList<TQueryGroup>;
       function GetClassName():String;
       function GenInsertProcCodeText():String;
       function GenUpdateProcCodeText():String;
@@ -46,6 +24,8 @@ type
       function GetFeatchProcCodeText(): String;
       procedure GetQueryFuncNameDefine(List:TStrings); //添加查询函数声明
       procedure GetQueryFuncCode(List:TStrings); //添加查询函数的代码
+      function GetQueryGroupName(Group:TQueryGroup;isHeaderDefine:Boolean):String;
+      procedure GetJsonSerializeCode(List:TStrings); //添加Json序列化代码
     public
       constructor Create(const TableName:String);
       procedure AddField(const FieldName,DelphiType,ControlString:string);overload;
@@ -57,34 +37,7 @@ type
 
 
 implementation
-
-const LowPreFix = 1;
-const HighPreFix = 4;
-const LowQuote = 1;
-const HighQute = 4;
-
-const  WidthPreFix : Array[LowPreFix..HighPreFix] of string = (' ', '  ', '   ', '    ');
-const  Quote: array[LowQuote..HighQute] of String = (#39,#39#39,#39#39#39,#39#39#39#39) ;
 var Templelate:TStringList;
-
-function _WD(Width:Integer):string;
-begin
-   Result := '';
-   if (Width >= LowPreFix) and (Width <= HighPreFix) then
-   begin
-     Result := WidthPreFix[Width];
-   end;
-end;
-
-function _Q(Count : Integer):String;
-begin
-   Result := '';
-   if (Count >= LowQuote) and (Count <= HighQute) then
-   begin
-     Result := Quote[Count];
-   end;
-end;
-
 { TDBTable }
 
 procedure TDBTable.AddField(const FieldName, DelphiType, ControlString: string);
@@ -96,6 +49,7 @@ var
   OP:TMysqlOP;
   FieldData : TFieldData;
   OpStr,OpType,Comment:string;
+  Group:Integer;
 begin
   CText := StrBetween(ControlString,'[',']');
   ControlList := TStringList.Create;
@@ -109,19 +63,17 @@ begin
   end;
 
   MysqlOps := [];
+
+  FieldData := TFieldData.Create;
+
+  FieldData.FieldName := FieldName;
+  FieldData.DelphiType := DelphiType;
+  if Comment.Length > 0 then
+    FieldData.Comment := _Q(2) + Comment + _Q(2);
+
+
   for i := 0 to ControlList.Count - 1 do
   begin
-
-    FieldData := TFieldData.Create;
-    With FieldData do
-    begin
-      FFieldName := FieldName;
-      FDelphiType := DelphiType;
-      if Comment.Length > 0 then
-        FComment := _Q(2) + Comment + _Q(2);
-    end;
-
-
     OpStr := Trim(ControlList[i]);
     OpType := Trim(StrBefore('(',OpStr));
     OP := GetMysqlOP(OpType);
@@ -129,20 +81,23 @@ begin
     //如果String 类型的作为了 主键 那么 必须指定长度 否则 将无法创表 这个是mysql的限制
     if (OP = mopPrimaryKey) and (LowerCase(DelphiType) = 'string') then
     begin
-      FieldData.FLength := StrToIntDef(StrBetween(OpStr,'(',')'),-1);
+      FieldData.Length := StrToIntDef(StrBetween(OpStr,'(',')'),-1);
     end;
 
     if OP = mopQueryAnd then
     begin
-      FieldData.FQueryAndGroup := StrToIntDef(StrBetween(OpStr,'(',')'),0);
+      Group := StrToIntDef(StrBetween(OpStr,'(',')'),0);
+      FieldData.AddQueryAndGroup(Group);
     end else if OP = mopQueryOr then
     begin
-      FieldData.FQueryOrGroup := StrToIntDef(StrBetween(OpStr,'(',')'),0);
+      Group := StrToIntDef(StrBetween(OpStr,'(',')'),0);
+      FieldData.AddQueryOrGroup(Group);
     end;
 
-    FieldData.FMysqlOps := FieldData.FMysqlOps + [OP];
-    FFields.Add(FieldData);
+    FieldData.MysqlOps := FieldData.MysqlOps + [OP];
   end;
+
+  FFields.Add(FieldData);
   ControlList.Free;
 
 
@@ -152,13 +107,13 @@ constructor TDBTable.Create(const TableName: String);
 begin
   FTableName := TableName;
   FFields := TObjectList<TFieldData>.Create;
-  QueryGroups := TObjectList<TQueryGroup>.Create;
+  FQueryGroups := TObjectList<TQueryGroup>.Create;
 end;
 
 destructor TDBTable.Destroy;
 begin
   FFields.Free;
-  QueryGroups.Free;
+  FQueryGroups.Free;
   inherited;
 end;
 
@@ -194,6 +149,7 @@ begin
   SourceText := TStringList.Create;
   SourceText.Add('var');
   SourceText.Add(_WD(2) + 'Sql:String;');
+  SourceText.Add(_WD(2) + 'Rows : TMysqlRow;');
   SourceText.Add(_WD(2) + Format('V : Array[1..%d] of String;',[FFields.Count]));
   SourceText.Add('begin');
 
@@ -203,7 +159,7 @@ begin
   begin
     if IsFirst then
     begin
-      Fileds := Fileds +  FieldData.FFieldName ;
+      Fileds := Fileds +  FieldData.FieldName ;
       if FieldData.IsNeedQuote() then
          Values := Values + '''%s'''
       else
@@ -211,7 +167,7 @@ begin
     end
     else
     begin
-      Fileds := Fileds + ',' + FieldData.FFieldName ;
+      Fileds := Fileds + ',' + FieldData.FieldName ;
       if FieldData.IsNeedQuote() then
          Values := Values + ''',%s'''
       else
@@ -231,8 +187,9 @@ begin
 
   InsertSql := Format('INSERT INTO %s (%s) VALUES (%s);',[FTableName,Fileds,Values]);
 
-
   SourceText.Add(_WD(2) + Format('Sql := format(''%s'',[%s]);',[InsertSql,FormatControl]));
+  SourceText.Add(Format(_WD(2) + 'Rows := TDBEngine.Inst().Query(%s);',['Sql']));
+
   SourceText.Add('end;');
   Result :=  SourceText.Text;
   SourceText.Free;
@@ -249,6 +206,7 @@ begin
   SourceText := TStringList.Create;
   SourceText.Add('var');
   SourceText.Add(_WD(2) + 'Sql:String;');
+  SourceText.Add(_WD(2) + 'Rows : TMysqlRow;');
   SourceText.Add('begin');
 
   IsFirst := True;
@@ -284,9 +242,11 @@ begin
     raise Exception.Create(FTableName + ' : UID Field not find!');
   end;
 
-  FormatText := _WD(2) + 'Sql := Format(' + _Q(1) + 'UPDATE %s SET %s WHERE %s = %s ;' + _Q(1) + ', [' + _Q(1) +  FTableName + _Q(1) + ', Sql ,' + _Q(1) +UIDField.FFieldName + _Q(1) + ',' +  UIDField.CodeOfValueToString() + ']);' ;
+  FormatText := _WD(2) + 'Sql := Format(' + _Q(1) + 'UPDATE %s SET %s WHERE %s = %s ;' + _Q(1) + ', [' + _Q(1) +  FTableName + _Q(1) + ', Sql ,' + _Q(1) +UIDField.FieldName + _Q(1) + ',' +  UIDField.CodeOfValueToString() + ']);' ;
 
   SourceText.Add(FormatText);
+
+  SourceText.Add(Format(_WD(2) + 'Rows := TDBEngine.Inst().Query(%s);',['Sql']));
   SourceText.Add('end;');
   Result :=  SourceText.Text;
   SourceText.Free;
@@ -309,9 +269,9 @@ begin
   for FieldData in FFields do
   begin
     Result.Add(FieldData.GetMysqlCloumnDesc());
-    if mopPrimaryKey in FieldData.FMysqlOps then
+    if mopPrimaryKey in FieldData.MysqlOps then
     begin
-      PrimaryKey := PrimaryKey + Format('`%s`,',[FieldData.FFieldName]);
+      PrimaryKey := PrimaryKey + Format('`%s`,',[FieldData.FieldName]);
     end;
   end;
 
@@ -325,12 +285,12 @@ begin
 
   for FieldData in FFields do
   begin
-    if mopIndexBTree in FieldData.FMysqlOps then
+    if mopIndexBTree in FieldData.MysqlOps then
     begin
-      Result.Add(Format('KEY `%s`(%s),',['KEY_' + FieldData.FFieldName,FieldData.FFieldName]));
-    end else if mopIndexHash in FieldData.FMysqlOps then
+      Result.Add(Format('KEY `%s`(%s),',['KEY_' + FieldData.FieldName,FieldData.FieldName]));
+    end else if mopIndexHash in FieldData.MysqlOps then
     begin
-      Result.Add(Format('KEY `%s`(%s) USING HASH,',['KEY_' + FieldData.FFieldName,FieldData.FFieldName]));
+      Result.Add(Format('KEY `%s`(%s) USING HASH,',['KEY_' + FieldData.FieldName,FieldData.FieldName]));
     end;
   end;
 
@@ -352,6 +312,7 @@ begin
    SourceText.Add('var');
    SourceText.Add(_WD(2) + ' V:' + GetClassName() + ';' );
    SourceText.Add(_WD(2) + ' I:Integer;' );
+   SourceText.Add(_WD(2) + ' Str:String;' );
    SourceText.Add('begin');
    SourceText.Add(_WD(2) + 'Result := ' + Format('TList<%s>.Create;',[GetClassName()]));
    SourceText.Add(_WD(2) + 'for I := 0 to MysqlRows.Count - 1 do ');
@@ -359,10 +320,36 @@ begin
    SourceText.Add(_WD(4) + 'V := ' + GetClassName() + '.Create();');
    for FieldData in FFields do
    begin
-      OP := GetDelphiTypeOP(FieldData.FDelphiType);
+      OP := GetDelphiTypeOP(FieldData.DelphiType);
       case OP of
-        fcOpNone: Text := Format('FieldByName(%s,V.%s);',[_Q(1) + FieldData.FFieldName + _Q(1),FieldData.FFieldName]);
-        fcOpIntToStr: Text := Format('V.%s := FieldByNameAsInteger(%s);',[FieldData.FFieldName ,_Q(1) + FieldData.FFieldName + _Q(1)]);
+        fcOpNone:
+        begin
+          if mopJsonClass in FieldData.MysqlOPs then
+          begin
+            Text := Format('MysqlRows.FieldByName(%s,Str);',[_Q(1) + FieldData.FieldName + _Q(1)]);
+            SourceText.Add(_WD(4) + Text);
+
+            Text := Format('V.%s.FromJson(Str);',[FieldData.FieldName]);
+          end else if mopAsJson in FieldData.MysqlOPs then
+          begin
+            Text := Format('MysqlRows.FieldByName(%s,Str);',[_Q(1) + FieldData.FieldName + _Q(1)]);
+            SourceText.Add(_WD(4) + Text);
+            Text := Format('_DBJsonToRtti(Str,@V.%s,TypeInfo(%s));',[FieldData.FieldName,FieldData.DelphiType]);
+
+          end else
+          begin
+            Text := Format('MysqlRows.FieldByName(%s,V.%s);',[_Q(1) + FieldData.FieldName + _Q(1),FieldData.FieldName]);
+          end;
+        end;
+        fcOpIntToStr: Text := Format('V.%s := MysqlRows.FieldByNameAsInteger(%s);',[FieldData.FieldName ,_Q(1) + FieldData.FieldName + _Q(1)]);
+        fcOpBoolean : Text := Format('V.%s := MysqlRows.FieldByNameAsBoolean(%s);',[FieldData.FieldName ,_Q(1) + FieldData.FieldName + _Q(1)]);
+        fcOpDouble : Text := Format('V.%s := MysqlRows.FieldByNameAsDouble%s);',[FieldData.FieldName ,_Q(1) + FieldData.FieldName + _Q(1)]);
+        fcOpToMysqlTime :
+        begin
+         Text := Format('MysqlRows.FieldByName(%s,Str);',[_Q(1) + FieldData.FieldName + _Q(1)]);
+         SourceText.Add(_WD(4) + Text);
+         Text := Format('V.%s := MysqlDateTimeStrToDateTime(Str);',[FieldData.FieldName]);
+        end;
       end;
       SourceText.Add(_WD(4) + Text);
 
@@ -371,48 +358,100 @@ begin
    SourceText.Add(_WD(4) +'MysqlRows.Next();');
    SourceText.Add(_WD(2) + 'end;');
 
-   SourceText.Add('end');
+   SourceText.Add('end;');
    Result := SourceText.Text;
    SourceText.Free;
+end;
+
+procedure TDBTable.GetJsonSerializeCode(List: TStrings);
+begin
+
 end;
 
 procedure TDBTable.GetQueryFuncCode(List: TStrings);
 var
   QueryGroup : TQueryGroup;
   FieldData:TFieldData;
-  FuncName:String;
-  Params:String;
-  SqlAnd:String;
+  SqlStr:String;
 begin
 
-  FuncName := '';
-  Params := '';
-  SqlAnd := '';
-  for QueryGroup in QueryGroups do
+  for QueryGroup in FQueryGroups do
   begin
-    for FieldData in QueryGroup.GroupFields  do
+
+    SqlStr := '';
+    if QueryGroup.QueryType = mopQueryAnd then
     begin
-      FuncName := FuncName + '_' + FieldData.FFieldName;
-      Params := Params + Format('%s : %s;',[FieldData.FFieldName,FieldData.FDelphiType]);
-      //SqlAnd := SqlAnd + FieldData.GetUPDATEFieldCodeText() + ' + ' +  _Q(1) +  'and' +_Q(1) + ' + ' ;
-      SqlAnd := SqlAnd + FieldData.GetUPDATEFieldCodeText() + ' + ' +  _Q(1) +  'and' +_Q(1) + ' + ' ;
+      for FieldData in QueryGroup.GroupFields  do
+      begin
+        SqlStr := SqlStr + FieldData.GetUPDATEFieldCodeText() + ' + ' +  _Q(1) +  'and' +_Q(1) + ' + ' ;
+      end;
+    end else
+    begin
+      for FieldData in QueryGroup.GroupFields  do
+      begin
+        SqlStr := SqlStr + FieldData.GetUPDATEFieldCodeText() + ' + ' +  _Q(1) +  ' or' +_Q(1) + ' + ' ;
+      end;
     end;
 
-    List.Add(Format('class function %s.%s(%s):TList<%s>',[GetClassName(),'QueryAnd' + FuncName,Params,GetClassName()]));
-    List.Add('var');
-    List.Add('Rows : MysqlRows');
-    List.Add('Sql:String;');
-    List.Add('Sql := ' + _Q(1) + 'select * from ' + FTableName + ' where ' + _Q(1) + ' + ' + SqlAnd + ';');
-    List.Add(Format('Rows := TDBEngine.Inst().Query(%s);',['Sql']));
 
+    SqlStr := Copy(SqlStr,1,Length(SqlStr) - 11);
+    List.Add(GetQueryGroupName(QueryGroup,False));
+    List.Add('var');
+    List.Add(_WD(2) + 'Rows : TMysqlRow;');
+    List.Add(_WD(2) + 'Sql:String;');
+    List.Add('begin;');
+    List.Add(_WD(2) + 'Sql := ' + _Q(1) + 'select * from ' + FTableName + ' where ' + _Q(1) + ' + ' + SqlStr + ';');
+    List.Add(Format(_WD(2) + 'Rows := TDBEngine.Inst().Query(%s);',['Sql']));
+    List.Add(_WD(2) + 'Result := FeatchToList(Rows);');
+    List.Add('end;');
 
   end;
 
 end;
 
 procedure TDBTable.GetQueryFuncNameDefine(List: TStrings);
+var
+  Group : TQueryGroup;
 begin
+  for Group in FQueryGroups do
+  begin
+    List.Add(_WD(2) + GetQueryGroupName(Group,true))
+  end;
+end;
 
+function TDBTable.GetQueryGroupName(Group:TQueryGroup;isHeaderDefine:Boolean):String;
+var
+  FieldData : TFieldData;
+  Fields:String;
+  Params:string;
+begin
+  Fields := '';
+  Params := '';
+  for FieldData in Group.GroupFields  do
+  begin
+    Fields := Fields + FieldData.FieldName + '_';
+    Params := Params + Format('%s : %s;',[FieldData.FieldName,FieldData.DelphiType]);
+  end;
+
+  Params := Copy(Params,1,Params.Length- 1);
+  Fields := Copy(Fields,1,Fields.Length - 1);
+
+  if Group.QueryType = mopQueryOr then
+  begin
+    Fields := 'QueryOr_' + Fields;
+  end else
+  begin
+    Fields := 'QueryAnd_' + Fields;
+  end;
+
+
+  if isHeaderDefine then
+  begin
+    Result := Format('class function %s(%s):TList<%s>;',[Fields,Params,GetClassName()])
+  end else
+  begin
+    Result := Format('class function %s.%s(%s):TList<%s>;',[GetClassName(),Fields,Params,GetClassName()])
+  end;
 end;
 
 procedure TDBTable.SaveToDir(const Path: String);
@@ -422,6 +461,7 @@ var
   implement:TStringList;
   FieldData : TFieldData;
   QueryGroup : TQueryGroup;
+  GroupID:Integer;
   function GetInsertProcName(isDefine:Boolean):string;
   begin
     if isDefine then
@@ -450,9 +490,9 @@ var
   function GetFeatchProcName(isDefine:Boolean):string;
   begin
     if isDefine then
-      Result := Format('class function FeatchToList(MysqlRows:TMysqlRow):TList<%s>;override;',[GetClassName()])
+      Result := Format('class function FeatchToList(MysqlRows:TMysqlRow):TList<%s>;',[GetClassName()])
     else
-      Result := Format('class function ' + GetClassName()+'.FeatchToList(MysqlRows:TMysqlRow):TList<%s>;override;',[GetClassName()])
+      Result := Format('class function ' + GetClassName()+'.FeatchToList(MysqlRows:TMysqlRow):TList<%s>;',[GetClassName()])
   end;
 
 
@@ -468,11 +508,11 @@ var
     Result := nil;
     if GroupType in [mopQueryOr,mopQueryAnd] then
     begin
-      for I := 0 to QueryGroups.Count - 1 do
+      for I := 0 to FQueryGroups.Count - 1 do
       begin
-        if (QueryGroups[i].GroupID = GroupID) and (QueryGroups[i].QueryType = GroupType)  then
+        if (FQueryGroups[i].GroupID = GroupID) and (FQueryGroups[i].QueryType = GroupType)  then
         begin
-          Result := QueryGroups[i];
+          Result := FQueryGroups[i];
         end;
       end;
     end;
@@ -480,7 +520,7 @@ var
     if Result = nil then
     begin
       Result := TQueryGroup.Create;
-      QueryGroups.Add(Result);
+      FQueryGroups.Add(Result);
       Result.GroupID := GroupID;
       Result.QueryType := GroupType;
     end;
@@ -503,23 +543,26 @@ begin
   begin
     Define.Add(_WD(4) + FieldData.GetDelphiFiledString());
 
-    if FieldData.FQueryAndGroup > 0 then
+    for GroupID in FieldData.QueryAndGroup  do
     begin
-      QueryGroup := FindQueryGroup(FieldData.FQueryAndGroup,mopQueryAnd);
+      QueryGroup := FindQueryGroup(GroupID,mopQueryAnd);
       QueryGroup.GroupFields.Add(FieldData);
     end;
 
-    if FieldData.FQueryOrGroup > 0 then
+    for GroupID in FieldData.QueryOrGroup do
     begin
-      QueryGroup := FindQueryGroup(FieldData.FQueryOrGroup,mopQueryOr);
+      QueryGroup := FindQueryGroup(GroupID,mopQueryOr);
       QueryGroup.GroupFields.Add(FieldData);
     end;
+
   end;
 
   Define.Add(_WD(4) + GetInsertProcName(true));
   Define.Add(_WD(4) + GetUpdateProcName(true));
   Define.Add(_WD(4) + GetCreateTableSqlProcName(true));
   Define.Add(_WD(4) + GetFeatchProcName(true));
+
+  GetQueryFuncNameDefine(Define);
 
   //类定义结束
   Define.Add(_WD(2) + 'end;');
@@ -553,82 +596,13 @@ begin
 
   Source.Text := StringReplace(Source.Text,'//#implementation',implement.Text,[rfReplaceAll]);
   implement.Free;
-  QueryGroups.Free;
+
+  FQueryGroups.Clear;
 
   Source.SaveToFile(Path + '\' + GetFileName()+ '.pas',TEncoding.UTF8);
   Source.Free;
 end;
 
-{ TFieldData }
-
-function TFieldData.CodeOfValueToString: String;
-var
-  OP:TFieldCodeOp;
-begin
-  OP := GetDelphiTypeOP(Self.FDelphiType);
-  case OP of
-    fcOpNone: Result :=  'Self._Q(' + Self.FFieldName + ')' ;
-    fcOpIntToStr: Result := 'Self._Q(IntToStr(' + Self.FFieldName + '))';
-  end;
-
-  if mopAsJson in  Self.FMysqlOps  then
-  begin
-    Result := Format('Self._Q(TSerialObject.RecordToJson<%s>(%s))',[FDelphiType,FFieldName]);
-  end else if mopJsonClass in Self.FMysqlOps then
-  begin
-    Result := 'Self._Q(' +  FFieldName + '.ToJsonString());';
-  end;
-end;
-
-function TFieldData.GetDelphiFiledString: String;
-begin
-  Result := FFieldName + ':' + FDelphiType + ';'
-end;
-
-function TFieldData.GetMysqlCloumnDesc: String;
-var
-  MysqlType:String;
-begin
-    if (mopAsJson in FMysqlOps) or (mopJsonClass in FMysqlOps) then
-    begin
-      MysqlType := 'json';
-    end else
-    begin
-      MysqlType := DelphiTypeToMysql(FDelphiType);
-      if (mopPrimaryKey in FMysqlOps) and (LowerCase(FDelphiType) = 'string') then
-      begin
-        if (FLength > (65535 div 4)) or (FLength < 1) then
-        begin
-          raise Exception.Create( format('string 做为主键 必须指定长度 并且取值范围应当在:[1-%d] FieldName:%s',[65535 div 4,FFieldName]) );
-        end;
-        MysqlType := Format('varchar(%d)',[FLength]);
-      end;
-    end;
-
-    if FComment <> '' then
-    begin
-      Result := Format('`%s` %s comment %s,',[FFieldName,MysqlType,FComment])
-    end else
-    begin
-      Result := Format('`%s` %s ,',[FFieldName,MysqlType])
-    end;
-
-end;
-
-function TFieldData.GetUPDATEFieldCodeText: string;
-begin
-  Result := _Q(1) + FFieldName + ' = ' + _Q(1) +' + ' +  CodeOfValueToString();
-end;
-
-function TFieldData.IsNeedQuote: Boolean;
-begin
-  Result := false;
-end;
-
-function TFieldData.IsUIDField: Boolean;
-begin
-  Result := mopUID in FMysqlOps;
-end;
 
 var
  R : TResourceStream;

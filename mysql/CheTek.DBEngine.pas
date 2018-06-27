@@ -21,6 +21,8 @@ type
     procedure CheckTableStruct(const TableName:String);
     procedure CheckConnect();
     function GetCreateTableSqlMap(List:TStrings):TDictionary<String,TFieldInfo>;
+  private
+    class var FSingleton : TDBEngine;
   public
     constructor Create(const Host:string;Port:Integer;const UserName , Password ,DataBase : String ; ThreadCount:Integer = 1 );
     destructor Destroy;override;
@@ -31,6 +33,7 @@ type
     class var MysqlTypeLevel : TDictionary<String,Integer>;
     class function GetAllTables():TArray<String>;
     class procedure RegisterClass(const TableName:string ; &Class:TDBRecordClass);overload;
+    class function Inst():TDBEngine;
   end;
 
 implementation
@@ -46,7 +49,7 @@ begin
        CharSet := 'utf8';
        if not SetDataBase(FDataBase) then
        begin
-          if Query(Format('CREATE DATABASE IF NOT EXISTS %s default charset utf8mb4 COLLATE utf8mb4_unicode_ci',[FDataBase])) then
+          if Query(Format('CREATE DATABASE IF NOT EXISTS %s default charset utf8mb4 COLLATE utf8mb4_unicode_ci',[FDataBase])) <> nil then
           begin
             OutPutInfo(Format('Create DataBase :%s sucess ',[FDataBase]));
             if SetDataBase(FDataBase) then
@@ -112,7 +115,7 @@ begin
           if GenCreateTableSqlMap.TryGetValue(FieldName,GenFieldInfo) then
           begin
             Sql := Format('ALTER TABLE `%s` ADD COLUMN `%s` %s;',[TableName,FieldName,GenFieldInfo.FieldType]);
-            if not Query(Sql) then
+            if  Query(Sql) = nil then
             begin
               OutPutError(Format('CheckTableStruct Cant Add Field :%s , Sql Error , %s , %s ' ,[FieldName,Sql,ErrorDesc] ));
             end else
@@ -186,7 +189,7 @@ begin
             if AllowChange then
             begin
               Sql := Format('ALTER TABLE `%s` MODIFY COLUMN `%s` %s;',[TableName,FieldName,GenFieldInfo.FieldType]);
-              if not Query(Sql) then
+              if  Query(Sql) = nil then
               begin
                 OutPutError(Format('CheckTableStruct Cant Query Modify Sql Error , %s , %d ' ,[Sql,ErrorDesc] ));
               end else
@@ -198,7 +201,7 @@ begin
           end else if DBFieldInfo.Comment <> GenFieldInfo.Comment then
           begin
               Sql := Format('ALTER TABLE `%s` MODIFY COLUMN `%s` %s comment %s ;',[TableName,FieldName,GenFieldInfo.FieldType,GenFieldInfo.Comment]);
-              if not Query(Sql) then
+              if Query(Sql) = nil then
               begin
                 OutPutError(Format('CheckTableStruct Cant Query Modify Sql Error , %s , %d ' ,[Sql,ErrorDesc] ));
               end else
@@ -230,6 +233,7 @@ begin
     FPassword := Password;
     FDataBase := DataBase;
     FThreadPool := TObjectList<TThread>.Create;
+    FSingleton := Self;
 end;
 
 procedure TDBEngine.CreateNewTable(const TableName: String);
@@ -244,7 +248,10 @@ begin
     if CreateTableSql <> nil then
     begin
       //CreateTableSql.SaveToFile('D:\Sql.sql');
-      Exec(CreateTableSql.Text);
+      if Query(CreateTableSql.Text) = nil then
+      begin
+        OutPutError('CreateTableSql Error:, Class : ' + TableName + ' , MysqlError:' + ErrorDesc);
+      end;
       CreateTableSql.Free;
     end else
     begin
@@ -340,6 +347,16 @@ begin
   finally
     DBTableList.Free;
   end;
+end;
+
+class function TDBEngine.Inst: TDBEngine;
+begin
+  if FSingleton = nil then
+  begin
+    raise Exception.Create('TDBEngine Inst is nil Need Init!');
+  end;
+
+  Result := FSingleton;
 end;
 
 class procedure TDBEngine.RegisterClass(const TableName: string;

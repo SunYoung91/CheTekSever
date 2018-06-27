@@ -6,7 +6,7 @@ type
   TMysqlOP = (mopNone,mopUpdateKey,mopAsJson,mopPrimaryKey,mopUnikey,mopIndexHash,mopIndexBTree,mopJsonClass,mopUID,mopQueryAnd,mopQueryOr);
   TMysqlOPSets = set of TMysqlOP;
 
-  TFieldCodeOp = (fcOpNone,fcOpIntToStr);
+  TFieldCodeOp = (fcOpNone,fcOpIntToStr,fcOpBoolean,fcOpDouble,fcOpToMysqlTime);
 function GetDelphiTypeOP(const DelphiOPType:String):TFieldCodeOp;
 function DelphiTypeToMysql(const DelphiType:String):string;
 //function MySqlTypeToMysql(const MysqlType:String):String;
@@ -54,7 +54,11 @@ begin
   DelphiToMysqlMap.Add('uint64','bigint(20) unsigned');
   DelphiToMysqlMap.Add('int64','bigint(20)');
 
+  DelphiToMysqlMap.Add('tdatetime','datetime');
   DelphiToMysqlMap.Add('string','text');
+
+  DelphiToMysqlMap.Add('boolean','tinyint(1)');
+  DelphiToMysqlMap.Add('double','double');
 
   FieldCodeOpMap.Add('byte',fcOpIntToStr);
   FieldCodeOpMap.Add('shortint',fcOpIntToStr);
@@ -68,6 +72,9 @@ begin
   FieldCodeOpMap.Add('uint64',fcOpIntToStr);
   FieldCodeOpMap.Add('int64',fcOpIntToStr);
 
+  FieldCodeOpMap.Add('tdatetime',fcOpToMysqlTime);
+  FieldCodeOpMap.Add('boolean',fcOpBoolean);
+  FieldCodeOpMap.Add('double',fcOpDouble);
   FieldCodeOpMap.Add('string',fcOpNone);
 
 

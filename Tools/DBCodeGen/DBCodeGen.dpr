@@ -18,7 +18,9 @@ uses
   TableCodeGen in 'TableCodeGen.pas',
   DBRecordBase in '..\..\mysql\DBRecordBase.pas',
   CheTek.DBEngine in '..\..\mysql\CheTek.DBEngine.pas',
-  CheTek.Mysql in '..\..\mysql\CheTek.Mysql.pas';
+  CheTek.Mysql in '..\..\mysql\CheTek.Mysql.pas',
+  FieldData in 'FieldData.pas',
+  Utils in 'Utils.pas';
 
 begin
   try

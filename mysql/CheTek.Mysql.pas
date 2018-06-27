@@ -63,6 +63,8 @@ type
     function FieldByNameAsInteger(const FieldName: string ; out Value:Int64):Boolean;overload;
     function FieldByNameAsInteger(const FieldName: string ):Int64;overload;
     function FieldByNameToBuffer(const FieldName: string; pPtr: Pointer; nLength: Integer):Boolean;
+    function FieldByNameAsDouble(const FieldName:String):Double;
+    function FieldByNameAsBoolean(const FieldName:String):Boolean;
     property Count: Integer read m_RowCount;
     property FieldCount: Integer read m_FieldCount;
 
@@ -111,10 +113,10 @@ type
     procedure Close(); //关闭与 Mysql 的连接
 
     //执行Query SQL语句
-    function Query(const SqlText: string): Boolean; //返回是否执行成功
+    function Query(const SqlText: string): TMysqlRow; //返回是否执行成功 为nil 则失败
 
     //执行 SQL语句
-    function Exec(const SqlText: string): Integer; //返回作用的行数
+    function Exec(const SqlText: string ; out EffectRows:Integer ): Integer; //返回作用的行数
 
    (* Query 和 Exec 的区别在于 一个需要 返回结果集 一个不需要返回结果集 *)
    (* 但是同样的 当查询完毕 都需要执行 ResetQuery 释放资源 *)
@@ -152,7 +154,7 @@ var
 begin
   Result := False;
   Sql := Format('SHOW CREATE TABLE `%s`',[TableName]);
-  if Query(Sql) then
+  if Query(Sql) <> nil then
   begin
     if ResultRow.Count > 0 then
     begin
@@ -286,18 +288,24 @@ begin
   end;
 end;
 
-function TMySql.Query(const SqlText: string): Boolean;
+function TMySql.Query(const SqlText: string): TMysqlRow;
 var
   nCount: Integer;
 begin
-  result := RealQuery(SqlText, true, nCount) = 0;
+   if RealQuery(SqlText, true, nCount) = 0 then
+   begin
+      Result := m_QueryResult;
+   end else
+   begin
+     Result := nil;
+   end;
 end;
 
 procedure TMySql.RaiseError(nError: Integer; nType: Integer = 0);
 var
   sError: String;
 begin
-  sError := string(mysql_error(m_Mysql));
+  sError := UTF8ToString(mysql_error(m_Mysql));
   RaiseError(sError);
 end;
 
@@ -310,8 +318,8 @@ begin
   end;
 end;
 
-//执行 boNeedResult 是否需要返回结果集 如果是 select 则需要  如果是Updata 这种则只需要返回作用的行数
 
+//执行 boNeedResult 是否需要返回结果集 如果是 select 则需要  如果是Updata 这种则只需要返回作用的行数
 function TMySql.RealQuery(SqlText: String; boNeedResult: Boolean; var nAffectRow: Integer): Integer;
 var
   Utf8:AnsiString;
@@ -337,7 +345,7 @@ begin
     OnAfterQuery(Result);
   end else
   begin
-    OnAfterExec(Result);
+    nAffectRow := OnAfterExec(Result);
   end;
 
 end;
@@ -501,9 +509,9 @@ begin
   inherited;
 end;
 
-function TMySql.Exec(const SqlText: string): Integer;
+function TMySql.Exec(const SqlText: string ; out EffectRows:Integer): Integer;
 begin
-  RealQuery(SqlText, false, Result);
+  Result := RealQuery(SqlText, false, EffectRows);
 end;
 
 { TMysqlRow }
@@ -667,6 +675,7 @@ begin
 
 end;
 
+
 function TMysqlRow.FieldByNameAsInteger(const FieldName: string): Int64;
 begin
   Result := 0;
@@ -683,7 +692,27 @@ begin
     Value := StrToIntDef(FieldName,0);
     Result := True;
   end;
+end;
 
+function TMysqlRow.FieldByNameAsBoolean(const FieldName: String): Boolean;
+var
+  Str : String;
+begin
+  if FieldByName(FieldName,Str) then
+  begin
+    Result  := StrToBool(Str);
+    Result := True;
+  end;
+end;
+
+function TMysqlRow.FieldByNameAsDouble(const FieldName: String): Double;
+var
+  Str : String;
+begin
+  if FieldByName(FieldName,Str) then
+  begin
+    Result := StrToFloatDef(Str,0);
+  end;
 end;
 
 function TMysqlRow.FieldByNameToBuffer(const FieldName: string; pPtr: Pointer;
@@ -693,8 +722,6 @@ var
 begin
   Result := False;
   nIndex := FieldIndex(FieldName);
-
-
   if nIndex >= 0 then
   begin
     if FieldToBuffer(nIndex, pPtr, nLength) then

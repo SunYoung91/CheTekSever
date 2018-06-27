@@ -1,7 +1,7 @@
 unit DBTemplelate;
 
 interface
-uses DBRecordBase,System.Classes,AttrType,System.SysUtils,CheTek.SerialObject;
+uses DBRecordBase,System.Classes,AttrType,System.SysUtils,CheTek.SerialObject,CheTek.Mysql,System.Generics.Collections;
 //#Type
 
 implementation

@@ -51,4 +51,22 @@ object Form1: TForm1
     TabOrder = 3
     OnClick = btn_EngineStartClick
   end
+  object btn_mysqlDateTime: TButton
+    Left = 416
+    Top = 80
+    Width = 217
+    Height = 25
+    Caption = 'btn_mysqlDateTime'
+    TabOrder = 4
+    OnClick = btn_mysqlDateTimeClick
+  end
+  object btn_insert: TButton
+    Left = 8
+    Top = 120
+    Width = 209
+    Height = 25
+    Caption = 'btn_insert'
+    TabOrder = 5
+    OnClick = btn_insertClick
+  end
 end
