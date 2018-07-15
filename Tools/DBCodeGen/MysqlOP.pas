@@ -3,7 +3,7 @@
 interface
 uses System.SysUtils;
 type
-  TMysqlOP = (mopNone,mopUpdateKey,mopAsJson,mopPrimaryKey,mopUnikey,mopIndexHash,mopIndexBTree,mopJsonClass,mopUID,mopQueryAnd,mopQueryOr);
+  TMysqlOP = (mopNone,mopUpdateKey,mopAsJson,mopPrimaryKey,mopUnikey,mopIndexHash,mopIndexBTree,mopJsonClass,mopUID,mopQueryAnd,mopQueryOr,mopQueryAnd1,mopQueryOr1);
   TMysqlOPSets = set of TMysqlOP;
 
   TFieldCodeOp = (fcOpNone,fcOpIntToStr,fcOpBoolean,fcOpDouble,fcOpToMysqlTime);
@@ -79,16 +79,18 @@ begin
 
 
     //操作控制符定义
-  MySqlOPMap.Add('json',mopAsJson);  //该字段执行序列号到json 再以字符串存储
+  MySqlOPMap.Add('json',mopAsJson);  //结构体->Json  如果类型获取不到会自动识别为结构体类型。
+  MySqlOPMap.Add('class',mopJsonClass); // Object -> json    //如果是 class 需要手动增加参数表示其是一个class
   MySqlOPMap.Add('pkey',mopPrimaryKey);
   MySqlOPMap.Add('ukey',mopUnikey);
   MySqlOPMap.Add('updatekey',mopUpdateKey);
   MySqlOPMap.Add('hash',mopIndexHash);
   MySqlOPMap.Add('btree',mopIndexBTree);
-  MySqlOPMap.Add('jsonclass',mopJsonClass);
   MySqlOPMap.Add('uid',mopUID);
   MySqlOPMap.Add('queryand',mopQueryAnd);
   MySqlOPMap.Add('queryor',mopQueryOr);
+  MySqlOPMap.Add('queryand1',mopQueryAnd1);
+  MySqlOPMap.Add('queryor1',mopQueryOr1);
 
 end;
 

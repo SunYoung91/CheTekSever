@@ -6,6 +6,7 @@ uses AttrType;
 Type
   //角色表
   Actor = record
+    //uses Classes;  //引用的单元文件
     ActorID :UInt64;  //#[uid,pkey,queryor(2)] comment : 角色ID
     Account :string; //#[pkey(20),queryand(1),queryor(2)] comment:所属账号
     ActorName : string;  //#[uni,queryand(1)] comment:角色名
@@ -15,6 +16,7 @@ Type
 
   //账号表
   Account = record
+    //uses Classes;  //引用的单元文件
     Account :string; //#[pkey(20),uid] comment:所属账号
     Password:string; //#comment:密码
     ChannelID:Integer; //#comment:渠道ID

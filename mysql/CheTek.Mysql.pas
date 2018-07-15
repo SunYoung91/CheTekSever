@@ -31,8 +31,6 @@ type
 
     m_nRowIndex: Integer; //当前行索引
 
-    m_nFieldIndex: Integer; //当前列索引
-
     m_FieldIndexList: TDictionary<String,Integer>; //字段名称对应的Index 用来实现FieldByName()
 
     procedure SetEmpty(); //设置为结果集为空
@@ -279,12 +277,12 @@ begin
     if not m_QueryResult.FetchResRow() then
     begin
       m_QueryResult.SetEmpty();
-      RaiseError(nError);
     end;
   end else
   begin
     m_MysqlRes := nil;
     m_QueryResult.SetEmpty();
+    RaiseError(nError);
   end;
 end;
 
@@ -583,13 +581,14 @@ end;
 procedure TMysqlRow.First;
 begin
   //如果 行数 和 列数 不为 0 则才需要重新 seek
-  if ((m_nRowIndex <> 0) or (m_nFieldIndex <> 0))
+  if ((m_nRowIndex <> 0))
     and (m_pRows <> nil)
     and (m_pMysqlRes <> nil) then
   begin
     mysql_data_seek(m_pMysqlRes, 0);
     mysql_field_seek(m_pMysqlRes, 0);
     m_pRows := mysql_fetch_row(m_pMysqlRes);
+    m_nRowIndex := 0;
   end;
 end;
 
@@ -689,7 +688,7 @@ begin
   Result := False;
   if FieldByName(FieldName,Str) then
   begin
-    Value := StrToIntDef(FieldName,0);
+    Value := StrToIntDef(Str,0);
     Result := True;
   end;
 end;
@@ -702,6 +701,8 @@ begin
   begin
     Result  := StrToBool(Str);
     Result := True;
+  end else begin
+    Result := False;
   end;
 end;
 
@@ -712,6 +713,9 @@ begin
   if FieldByName(FieldName,Str) then
   begin
     Result := StrToFloatDef(Str,0);
+  end else
+  begin
+    Result := 0;
   end;
 end;
 
@@ -751,6 +755,7 @@ begin
     //移动游标 到 0 0
     mysql_data_seek(m_pMysqlRes, 0);
     mysql_field_seek(m_pMysqlRes, 0);
+    m_nRowIndex := 0;
 
     //记录数量
     m_FieldCount := mysql_num_fields(m_pMysqlRes);

@@ -16,7 +16,6 @@ type
     FUserName:String;
     FPassword:string;
     FDataBase:String;
-    FThreadPool:TObjectList<TThread>;
     procedure CreateNewTable(const TableName:String);
     procedure CheckTableStruct(const TableName:String);
     procedure CheckConnect();
@@ -24,15 +23,13 @@ type
   private
     class var FSingleton : TDBEngine;
   public
-    constructor Create(const Host:string;Port:Integer;const UserName , Password ,DataBase : String ; ThreadCount:Integer = 1 );
+    constructor Create(const Host:string;Port:Integer;const UserName , Password ,DataBase : String );
     destructor Destroy;override;
-    procedure Init();
-    procedure RegisterClass(&Class:TDBRecordClass);overload;
+    procedure Init();virtual;
   public
-    class var TableClasses : TDictionary<String,TDBRecordClass> ;
+    class var CreateSql:TDictionary<String,TStringList>;
     class var MysqlTypeLevel : TDictionary<String,Integer>;
     class function GetAllTables():TArray<String>;
-    class procedure RegisterClass(const TableName:string ; &Class:TDBRecordClass);overload;
     class function Inst():TDBEngine;
   end;
 
@@ -71,7 +68,6 @@ end;
 
 procedure TDBEngine.CheckTableStruct(const TableName: String);
 var
-  DBRecord : TDBRecordClass;
   CreateTableText:TStringList;
   DBMysqlList:TStrings;
   FieldName,Sql:String;
@@ -83,14 +79,8 @@ var
   AllowChange:Boolean;
 
 begin
-  if TableClasses.TryGetValue(TableName,DBRecord) then
+  if CreateSql.TryGetValue(TableName,CreateTableText) then
   begin
-    CreateTableText := DBRecord.GetCreateTableSql();
-    if CreateTableText = nil then
-    begin
-      OutPutError('CheckTableStruct DBRecord.GetCreateTableSql = nil');
-      Exit;
-    end;
 
     DBMysqlList := TStringList.Create;
     if not GetCreateTableSql(TableName,DBMysqlList) then
@@ -224,7 +214,7 @@ begin
 end;
 
 constructor TDBEngine.Create(const Host: string; Port: Integer; const UserName,
-  Password , DataBase: String ; ThreadCount:Integer );
+  Password , DataBase: String );
 begin
     inherited Create();
     FHost := Host;
@@ -232,32 +222,21 @@ begin
     FUserName := UserName;
     FPassword := Password;
     FDataBase := DataBase;
-    FThreadPool := TObjectList<TThread>.Create;
     FSingleton := Self;
 end;
 
 procedure TDBEngine.CreateNewTable(const TableName: String);
 var
-  DBRecord : TDBRecordClass;
   CreateTableSql:TStringList;
 begin
-  if TableClasses.TryGetValue(TableName,DBRecord) then
+  if CreateSql.TryGetValue(TableName,CreateTableSql) then
   begin
-
-    CreateTableSql := DBRecord.GetCreateTableSql();
-    if CreateTableSql <> nil then
-    begin
       //CreateTableSql.SaveToFile('D:\Sql.sql');
       if Query(CreateTableSql.Text) = nil then
       begin
         OutPutError('CreateTableSql Error:, Class : ' + TableName + ' , MysqlError:' + ErrorDesc);
       end;
       CreateTableSql.Free;
-    end else
-    begin
-      OutPutError('Can not get CreateTableSqlText, Class : ' + TableName);
-    end;
-
   end else
   begin
     OutPutError('Can not get Table Class : ' + TableName);
@@ -265,25 +244,13 @@ begin
 end;
 
 destructor TDBEngine.Destroy;
-var
-  Thread:TThread;
 begin
-  for Thread in FThreadPool do
-  begin
-    Thread.Start;
-    Thread.Terminate;
-    Thread.WaitFor;
-  end;
-  FThreadPool.Free;
   inherited;
 end;
 
 class function TDBEngine.GetAllTables: TArray<String>;
 begin
-  if TableClasses = nil then
-    TableClasses := TDictionary<String,TDBRecordClass>.Create;
-
-  Result := TableClasses.Keys.ToArray();
+  Result := CreateSql.Keys.ToArray();
 end;
 
 function TDBEngine.GetCreateTableSqlMap(
@@ -293,18 +260,18 @@ var
   FiledName:String;
   MysqlType:String;
   Info: TFieldInfo;
+  I:Integer;
 begin
   Result := TDictionary<String, TFieldInfo>.Create;
-  for Str in List do
+  for  I := 0 to List.Count - 1  do
   begin
-    Str2 := Trim(Str);
+    Str2 := TrimLeft(List[i]);
     if Length(Str2) >= 1 then
     begin
       if Str2[1] = '`' then
       begin
-        FiledName := StrBetween(Str2,'`','`');
+        FiledName := Trim(StrBetween(Str2,'`','`'));
         MysqlType :=  StrBetween(Str2,' ',' ');
-
         if StrMatch('unsigned',Str2) > 0 then
         begin
           MysqlType := MysqlType + ' unsigned';
@@ -313,7 +280,13 @@ begin
         Info.FieldType := MysqlType;
         info.Comment := StrAfter('comment',LowerCase(Str2));
         info.Comment := StrBefore(',',Info.Comment);
-        Result.Add( FiledName , info );
+        if FiledName <> '' then
+        begin
+         Result.Add( FiledName , info );
+        end else
+        begin
+          Raise Exception.Create('can not get GetCreateTableSqlMap : ' + Str2);
+        end;
       end;
     end;
 
@@ -359,19 +332,6 @@ begin
   Result := FSingleton;
 end;
 
-class procedure TDBEngine.RegisterClass(const TableName: string;
-  &Class: TDBRecordClass);
-begin
-    if TableClasses = nil then
-      TableClasses := TDictionary<String,TDBRecordClass>.Create();
-    TableClasses.Add(TableName,&Class);
-end;
-
-procedure TDBEngine.RegisterClass(&Class: TDBRecordClass);
-begin
-  //啥也不做 这里只是用来防止编译器优化文件会将有的生成的 DB 操作源码文件不会编译进来的问题
-end;
-
 procedure InitMysqlLevelConst();
 begin
   //用于在数据库结构变更时候判断 mod 100 后的数字 如果 升级后的数字更大 才允许升级
@@ -383,21 +343,24 @@ begin
     Add('bigint',4);
     Add('varchar',101);
     Add('text',102);
+    Add('json',200);
   end;
 end;
 
 initialization
 begin
   TDBEngine.MysqlTypeLevel := TDictionary<String,Integer>.Create;
+  TDBEngine.CreateSql := TDictionary<String,TStringList>.Create;
   InitMysqlLevelConst();
 end;
 
 finalization
 
 FreeAndNil(TDBEngine.MysqlTypeLevel);
-if TDBEngine.TableClasses <> nil then
+
+if TDBEngine.CreateSql <> nil then
 begin
-  FreeAndNil(TDBEngine.TableClasses);
+  FreeAndNil(TDBEngine.CreateSql);
 end;
 
 

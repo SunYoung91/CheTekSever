@@ -23,6 +23,7 @@ type
         procedure BuildTargetFile(SyntaxTree: TSyntaxNode);
         function FindInterfaceNode(SyntaxTree: TSyntaxNode):TSyntaxNode;
 	    	procedure ProcessTypeDecl(SyntaxTree: TSyntaxNode);
+        function GetUsesString(SyntaxTree: TSyntaxNode):string;
         procedure Gen();
     end;
 
@@ -145,6 +146,27 @@ begin
 
 end;
 
+function TCodeGen.GetUsesString(SyntaxTree: TSyntaxNode): string;
+var
+  line:Integer;
+  Str:String;
+begin
+  line := SyntaxTree.Line;
+  Result := '';
+  if FSource.Count > line then
+  begin
+    Str := FSource[line];
+    if StrMatch('uses',Str) >= 1 then
+    begin
+      Str := StrAfter('//',Str);
+      Str := StrBefore('//',Str);
+      Str := StrAfter('uses',Str);
+      Str := StringReplace(Str,';','',[rfReplaceAll]);
+      Result := ',' +  Str;
+    end;
+  end;
+end;
+
 procedure TCodeGen.ProcessTypeDecl(SyntaxTree: TSyntaxNode);
 var
   Node,FieldNode : TSyntaxNode;
@@ -157,7 +179,7 @@ begin
     Node := SyntaxTree.ChildNodes[i];
     if Node.Typ = ntType then
     begin
-      Table := TDBTable.Create(SyntaxTree.GetAttribute(anName));
+      Table := TDBTable.Create(SyntaxTree.GetAttribute(anName),GetUsesString(SyntaxTree),Node.GetAttribute(anType));
       FTables.Add(Table);
       for j := Low(Node.ChildNodes) to High(Node.ChildNodes) do
       begin

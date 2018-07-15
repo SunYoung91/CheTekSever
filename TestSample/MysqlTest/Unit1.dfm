@@ -69,4 +69,13 @@ object Form1: TForm1
     TabOrder = 5
     OnClick = btn_insertClick
   end
+  object btn_query: TButton
+    Left = 416
+    Top = 120
+    Width = 217
+    Height = 25
+    Caption = 'btn_query'
+    TabOrder = 6
+    OnClick = btn_queryClick
+  end
 end

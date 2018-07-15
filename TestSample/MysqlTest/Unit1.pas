@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls, IdBaseComponent, IdComponent,
-  IdTCPConnection, IdTCPClient, IdHTTP,CheTek.Mysql,StringUtils,CheTek.DBEngine,DB_Actor,DB_Item,DB_Account,DBRecordBase;
+  IdTCPConnection, IdTCPClient, IdHTTP,CheTek.Mysql,StringUtils,CheTek.DBEngine,DB_Actor,DB_Item,DB_Account,DBRecordBase,AttrType,System.Generics.Collections;
 
 type
   TForm1 = class(TForm)
@@ -15,11 +15,13 @@ type
     btn_EngineStart: TButton;
     btn_mysqlDateTime: TButton;
     btn_insert: TButton;
+    btn_query: TButton;
     procedure btn3Click(Sender: TObject);
     procedure btn_showCreateTableClick(Sender: TObject);
     procedure btn_EngineStartClick(Sender: TObject);
     procedure btn_mysqlDateTimeClick(Sender: TObject);
     procedure btn_insertClick(Sender: TObject);
+    procedure btn_queryClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -107,6 +109,9 @@ begin
   Item.ActorID := 12131321;
   Item.Account := '你懂上面';
   Item.ActorName := 'abcdefg';
+  Item.Info := TTestMyList.Create;
+  Item.Info.Name := 'Dad';
+  Item.Info.Age := 18;
   Item.Update;
 end;
 
@@ -116,6 +121,14 @@ var
 begin
   DateTime := MysqlDateTimeStrToDateTime('2018-06-22 15:23:16');
   mmo_Log.Lines.Add(FormatDateTime('YYYY_MM_DD_HH_NN_SS',DateTime));
+end;
+
+procedure TForm1.btn_queryClick(Sender: TObject);
+var
+  Items : TList<TDBRecordOfActor>;
+begin
+
+  Items := TDBRecordOfActor.QueryAnd_Account_ActorName('你懂上面','abcdefg');
 end;
 
 procedure TForm1.btn_showCreateTableClick(Sender: TObject);
