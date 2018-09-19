@@ -6,3 +6,10 @@ Tools/DBCodeGen/__history/
 /TestSample/MysqlTest/__history
 /mysql/__history
 Tools/DBCodeGen/Test/__history/
+Tools/ProtocolGen/__history/
+Tools/ProtocolGen/Test/__history/
+Tools/ProtocolGen/Win32/Debug/ProtocolGen.exe
+Tools/ProtocolGen/Win32/Debug/DBCodeGen.exe
+TestSample/MysqlTest/MysqlTest.exe
+Tools/DBCodeGen/Win32/Debug/DBCodeGen.exe
+TestSample/SerialObjectToJson/Win32/Debug/SerialObject2json.exe
