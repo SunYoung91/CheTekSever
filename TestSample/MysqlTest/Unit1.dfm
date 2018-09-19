@@ -15,9 +15,9 @@ object Form1: TForm1
   TextHeight = 13
   object mmo_Log: TMemo
     Left = 8
-    Top = 166
+    Top = 328
     Width = 633
-    Height = 595
+    Height = 433
     ImeName = #20013#25991'('#31616#20307') - '#25628#29399#25340#38899#36755#20837#27861
     Lines.Strings = (
       'mmo_Log')
@@ -77,5 +77,23 @@ object Form1: TForm1
     Caption = 'btn_query'
     TabOrder = 6
     OnClick = btn_queryClick
+  end
+  object btn_create_danyao_alter: TButton
+    Left = 8
+    Top = 224
+    Width = 161
+    Height = 25
+    Caption = 'btn_create_danyao_alter'
+    TabOrder = 7
+    OnClick = btn_create_danyao_alterClick
+  end
+  object btn_checkdata: TButton
+    Left = 376
+    Top = 224
+    Width = 217
+    Height = 25
+    Caption = 'checkdata'
+    TabOrder = 8
+    OnClick = btn_checkdataClick
   end
 end

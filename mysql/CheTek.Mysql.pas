@@ -688,7 +688,7 @@ begin
   Result := False;
   if FieldByName(FieldName,Str) then
   begin
-    Value := StrToIntDef(Str,0);
+    Value := StrToInt64Def(Str,0);
     Result := True;
   end;
 end;

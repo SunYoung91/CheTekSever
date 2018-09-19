@@ -1,0 +1,3 @@
+D:\llifework\llife\protocol\S2C\Login_S2C.pas D:\llifework\llife\M2Engine\protocol\S2C
+
+D:\llifework\llife\M2Engine\DB\DB_Scheme.pas D:\llifework\llife\M2Engine\DB
