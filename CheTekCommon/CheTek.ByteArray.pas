@@ -26,12 +26,12 @@ type
     procedure WriteByteArray(ByteArray:TCheTekByteArray) ;
     procedure AppendBuffer(ASource: TCheTekByteArray); inline;
     function Read(Buf: Pointer; Size: UInt): UInt;
+    function Delete(Size: UInt): UInt; //删除头部长度 会移动数据
     procedure Clear; inline;
-
     procedure WriteString(value:String); //写入一个字符串 作为uf8编码模式 会预先写入2个字节作为string 长度 如果超过65535 则写入空串
     procedure WriteByteData(value:TBytes); //写入TBytes 类型的数据
     procedure WriteByte(value:Byte);
-    procedure WriteShort(value:word);
+    procedure WriteWord(value:word);
     procedure WriteInteger(value:Integer);
     procedure WriteInt64(value:Int64);
     procedure WriteUInt64(value:Int64);
@@ -45,7 +45,7 @@ type
     function ReadInt64: Int64;
     function ReadUInt64: UInt64;
     function ReadByte: Byte;
-    function ReadShort: Word;
+    function ReadWord: Word;
     function ReadString():String;
     function WriteToStream(Source:TStream;ToCount:NativeUInt = 0):NativeUInt;
 
@@ -54,7 +54,7 @@ type
     procedure SizeAdd(Value:UInt); //外部手动调用增加size 通常是在使用OffsetMemory 获取原始地址后 move了内存而进行增加的
     property Size: UInt read FSize;
     property Memory: Pointer read FMemory;
-    property Position : UInt read FPosition write FPosition;
+    property Position : NativeUInt read FPosition write FPosition;
     property LeftSize:UInt read GetLeftSize; //在不进行扩容的当前还剩余多少大小
     property OffsetMemory:Pointer read GetOffSetPointer;
     property BytesAvailable:NativeUInt read GetBytesAvailable; //获取当前位置到结尾还剩多少字节可以进行读取
@@ -150,6 +150,19 @@ begin
  Result := Pointer(UInt(FMemory) + FSize);
 end;
 
+function TCheTekByteArray.Delete(Size: UInt): UInt;
+var
+  DeleteSize:UInt;
+begin
+  DeleteSize := Min(Size, FSize);
+
+  //当减去的大小不是 总大小那就需要移动内存。这里考虑做一个起始偏倚  否则小块内存移除会一直移动内存
+  if FSize <> DeleteSize then
+    Move(PByte(UInt(FMemory) + DeleteSize)^, FMemory^, FSize - DeleteSize);
+
+  Dec(FSize, DeleteSize);
+  Result := DeleteSize;
+end;
 
 procedure TCheTekByteArray.Assign(source: TCheTekByteArray);
 begin
@@ -175,7 +188,7 @@ var
   BytesLen:Word;
   Bytes:TBytes;
 begin
-  BytesLen := ReadShort();
+  BytesLen := ReadWord();
   if BytesLen > 0 then
   begin
     SetLength(Bytes,BytesLen);
@@ -206,7 +219,7 @@ begin
   Read(@Result, Sizeof(Result));
 end;
 
-function TCheTekByteArray.ReadShort: Word;
+function TCheTekByteArray.ReadWord: Word;
 begin
   Read(@Result, Sizeof(Result));
 end;
@@ -264,7 +277,7 @@ begin
   Write(@value,8);
 end;
 
-procedure TCheTekByteArray.WriteShort(value: word);
+procedure TCheTekByteArray.WriteWord(value: word);
 begin
   Write(@value,2);
 end;
@@ -273,7 +286,7 @@ function TCheTekByteArray.WriteStream(Source:TStream;ToCount:NativeUInt = 0):Nat
 const
   MaxBufSize = $F000;
 var
-  BufSize, N: Integer;
+  BufSize, N: NativeUInt;
   Buffer: TBytes;
 begin
   if ToCount <= 0 then
@@ -326,18 +339,18 @@ var
 begin
   if value = '' then
   begin
-    WriteShort(0);
+    WriteWord(0);
   end else
   begin
     Bytes := TEncoding.UTF8.GetBytes(value);
     BytesLength := Length(Bytes);
     if BytesLength < $FFFF then
     begin
-      WriteShort(BytesLength);
+      WriteWord(BytesLength);
       WriteByteData(Bytes);
     end else
     begin
-      WriteShort(0); //长度超过直接写0
+      WriteWord(0); //长度超过直接写0
     end;
   end;
 end;

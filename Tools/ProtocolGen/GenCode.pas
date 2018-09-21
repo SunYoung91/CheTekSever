@@ -4,7 +4,7 @@ interface
 uses
   StringPool,System.Classes,
   DelphiAST, DelphiAST.Writer, DelphiAST.Classes,DelphiAst.Consts,
-  SimpleParser.Lexer.Types, IOUtils, Diagnostics,System.SysUtils,DB,System.Generics.Collections,MysqlOP,JclStrings,RecordProtocol,StringUtils;
+  SimpleParser.Lexer.Types, IOUtils, Diagnostics,System.SysUtils,DB,System.Generics.Collections,MysqlOP,JclStrings,RecordProtocol,StringUtils,System.Types;
 
 const
   INSERT = 'INSERT';
@@ -13,14 +13,15 @@ type
 
     TCodeGen = class
     private
-      FSourceFile:String;
+      FSourceDir:String;
       FTargetDir:String;
       FProtocols: TObjectList<TRecordProtocol>;
+      FProtocolDict : TDictionary<Word,TRecordProtocol>;
       FSource:TStringList;
       Function GetFieldNodeInfo(SyntaxTree: TSyntaxNode;out FieldName,FieldType,ControlString:String):Boolean;
     public
-      constructor Create(const SourceFile,TargetDir:String);
-      procedure BuildTargetFile(SyntaxTree: TSyntaxNode);
+      constructor Create(const SourceDir,TargetDir:String);
+      procedure BuildTargetFile(const SourceFileName:String ; SyntaxTree: TSyntaxNode);
       function FindInterfaceNode(SyntaxTree: TSyntaxNode):TSyntaxNode;
       procedure ProcessTypeDecl(SyntaxTree: TSyntaxNode);
       function GetUsesString(SyntaxTree: TSyntaxNode):string;
@@ -32,7 +33,9 @@ implementation
 {$R DBCodeGenResource.res}
 { TCodeGen }
 
-procedure TCodeGen.BuildTargetFile(SyntaxTree: TSyntaxNode);
+var Templelate : TStringList;
+
+procedure TCodeGen.BuildTargetFile(const SourceFileName:String ; SyntaxTree: TSyntaxNode);
 var
   InterfaceNode , ChildNode,Node : TSyntaxNode;
   i , j : Integer;
@@ -75,7 +78,7 @@ begin
   end;
 
   Source := TStringList.Create;
-  UnitName := StringReplace(ExtractFileName(FSourceFile),'.pas','',[rfReplaceAll]);
+  UnitName := StringReplace(ExtractFileName(SourceFileName),'.pas','',[rfReplaceAll]);
   Source.Add('unit ' + UnitName + ';');
   Source.Add('interface');
   Source.Add('uses System.Classes,System.SysUtils,CheTek.ByteArray;');
@@ -88,17 +91,17 @@ begin
   ImplList.Free;
   InterfaceList.Free;
 
-  Source.SaveToFile(FTargetDir + '\' +  UnitName + '.pas');
+  Source.SaveToFile(FTargetDir + '\' +  UnitName + '.pas',TEncoding.UTF8);
   Source.Free;
 end;
 
-constructor TCodeGen.Create(const SourceFile, TargetDir: String);
+constructor TCodeGen.Create(const SourceDir, TargetDir: String);
 begin
-  FSourceFile := SourceFile;
+  FSourceDir := SourceDir;
   FTargetDir := TargetDir;
   FSource := TStringList.Create;
-  FSource.LoadFromFile(SourceFile);
   FProtocols := TObjectList<TRecordProtocol>.Create;
+  FProtocolDict := TDictionary<Word,TRecordProtocol>.Create();
 end;
 
 
@@ -128,24 +131,154 @@ procedure TCodeGen.Gen;
 var
   SyntaxTree: TSyntaxNode;
   HasException : Boolean;
+  Files:TStringDynArray;
+  I:Integer;
+  ProtocolIDArray:TArray<Word>;
+  ID:Word;
+  List: TStringList;
+  TargetHandleProtocolFile:String;
+  InterfaceList:TStringList;
+  ImplList:TStringList;
+  Protocol : TRecordProtocol;
+  ProcName:String;
+  FileName , UseStr , TempStr:String;
+  InterfaceDict : TDictionary<string,Boolean>;
+  None:Boolean;
+  SourceDirName , HandleProtocolName:String;
+  UseList:TStringList;
 begin
-  SyntaxTree := nil;
-  HasException := False;
-  try
-    SyntaxTree := TPasSyntaxTreeBuilder.Run(FSourceFile, True,
-        nil);
-  except
-    on E: ESyntaxTreeException do
+
+  Files := TDirectory.GetFiles(FSourceDir,'*.pas',TSearchOption.soTopDirectoryOnly);
+  UseList := TStringList.Create;
+  for i := 0 to High(Files) do
+  begin
+    FileName := ExtractFileName(Files[i]);
+    if FileName <> 'HandleProtocol.pas' then
     begin
-      HasException := True;
+      UseStr := UseStr + StrBefore('.',FileName) + ',';
+      FSource.LoadFromFile(Files[i]);
+      SyntaxTree := nil;
+      HasException := False;
+      try
+        SyntaxTree := TPasSyntaxTreeBuilder.Run(Files[i], True,
+            nil);
+      except
+        on E: ESyntaxTreeException do
+        begin
+          HasException := True;
+        end;
+      end;
+
+      if not HasException then
+      begin
+        UseList.Add(ChangeFileExt(ExtractFileName(Files[i]),''));
+        BuildTargetFile(Files[i],SyntaxTree);
+      end;
     end;
   end;
 
-  if not HasException then
+  UseStr := UseStr + ' SocketInterface , System.Classes ; ';
+
+
+  //处理所有协议 生成 协议处理文件。
+  ProtocolIDArray := FProtocolDict.Keys.ToArray();
+  TArray.Sort<Word>(ProtocolIDArray);
+  List := TStringList.Create();
+  SourceDirName := ExtractFileName(FSourceDir);
+  HandleProtocolName := 'Handle_' + SourceDirName;
+  TargetHandleProtocolFile := FTargetDir + Format('\%s.pas',[HandleProtocolName]);
+  ImplList := TStringList.Create;
+  InterfaceList := TStringList.Create;
+  InterfaceDict := TDictionary<string,Boolean>.Create();
+  if FileExists(TargetHandleProtocolFile) then
   begin
-    BuildTargetFile(SyntaxTree);
+    List.LoadFromFile(TargetHandleProtocolFile);
+    InterfaceList.Text := TStringUtil.StrBetween(List.Text,'//INTERFACE','//INTERFACE');
+    ImplList.Text := TStringUtil.StrBetween(List.Text,'//IMPL','//IMPL');
+
+    for I := 0 to interfaceList.Count - 1 do
+    begin
+      TempStr := Trim(interfaceList[i]);
+      if TStringUtil.StartWith(TempStr,'procedure') then
+      begin
+        TempStr := Trim(TStringUtil.StrBetween(TempStr,'procedure','('));
+        InterfaceDict.Add(TempStr,True);
+      end;
+
+    end;
+
+    ImplList[0] := ('//IMPL');
+    InterfaceList[0] := '//INTERFACE';
+  end else
+  begin
+    ImplList.Add('//IMPL');
+    InterfaceList.Add('//INTERFACE');
   end;
 
+
+  for i := 0 to High(ProtocolIDArray) do
+  begin
+    ID := ProtocolIDArray[i];
+    FProtocolDict.TryGetValue(ID,Protocol);
+    ProcName := 'Handle_' + Protocol.Name;
+
+    //原来有的函数就算了
+    if not InterfaceDict.TryGetValue(ProcName,None) then
+    begin
+      ProcName := Format('procedure Handle_%s(Socket:ISocket;ByteArray:TCheTekByteArray);',[Protocol.Name]);
+      InterfaceList.Add(ProcName);
+      ImplList.Add('');
+      ImplList.Add(ProcName);
+      ImplList.Add('var');
+      ImplList.Add('data : ' + Protocol.Name  + ';');
+      ImplList.Add('begin');
+      ImplList.Add('  data.DeserializeFrom(ByteArray);');
+      ImplList.Add('');
+      ImplList.Add('end;');
+    end;
+
+  end;
+
+  ImplList.Add('//IMPL');
+  InterfaceList.Add('//INTERFACE');
+  List.Clear;
+  List.Add('unit ' + HandleProtocolName + ';');
+  List.Add('interface');
+  List.Add('uses ' + UseStr);
+  List.AddStrings(InterfaceList);
+
+  List.Add('implementation');
+  List.AddStrings(ImplList);
+  List.Add('end.');
+  List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
+
+  //处理总socket 协议接收部分。
+  List.Clear;
+  ImplList.Clear;
+  for i := 0 to UseList.Count - 1 do
+  begin
+    if i <> UseList.Count - 1 then
+    begin
+      UseList[i] := UseList[i] + ',';
+    end;
+  end;
+  UseList.Insert(0,',');
+
+  List.Assign(Templelate);
+  List.Text := StringReplace(List.Text,'{uses}',UseList.Text,[rfReplaceAll]);
+  for i := 0 to High(ProtocolIDArray) do
+  begin
+    ID := ProtocolIDArray[i];
+    FProtocolDict.TryGetValue(ID,Protocol);
+    ProcName := 'Handle_' + Protocol.Name;
+    ImplList.Add(Format('ProcArray[%d] := %s ;',[ID,ProcName]));
+  end;
+
+  List.Text := StringReplace(List.Text,'{$PROTOCOLREGISTER}',ImplList.Text,[rfReplaceAll]);
+  TargetHandleProtocolFile := ExtractFilePath(TargetHandleProtocolFile) + '\RegisterHanderProc_' + SourceDirName + '.pas';
+  List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
+  List.Free;
+  UseList.Free;
 end;
 
 function TCodeGen.GetFieldNodeInfo(SyntaxTree: TSyntaxNode; out FieldName,
@@ -213,6 +346,16 @@ begin
     begin
       TRecord := TRecordProtocol.Create(SyntaxTree.GetAttribute(anName),GetUsesString(SyntaxTree),Node.GetAttribute(anType));
       FProtocols.Add(TRecord);
+      if TRecord.ProtocolID > 0 then
+      begin
+        if FProtocolDict.ContainsKey(TRecord.ProtocolID) then
+        begin
+          raise Exception.Create(Format('协议ID 重复 : %d',[TRecord.ProtocolID]));
+        end else
+        begin
+          FProtocolDict.Add(TRecord.ProtocolID,TRecord);
+        end;
+      end;
       for j := Low(Node.ChildNodes) to High(Node.ChildNodes) do
       begin
         FieldNode := Node.ChildNodes[J];
@@ -236,6 +379,15 @@ begin
 
 end;
 
+var
+ R : TResourceStream;
 
+initialization
+  Templelate := TStringList.Create;
+  R := TResourceStream.Create(HInstance,'DB','RC_DATA');
+  Templelate.LoadFromStream(R);
+  R.Free;
+finalization
+  Templelate.Free;
 
 end.

@@ -1,7 +1,7 @@
 ﻿unit RecordProtocol;
 
 interface
-uses MysqlOP,System.Generics.Collections,System.SysUtils,System.Classes,JclStrings,System.IOUtils,Utils,JclDateTime;
+uses MysqlOP,System.Generics.Collections,System.SysUtils,System.Classes,JclStrings,System.IOUtils,Utils,JclDateTime,StringUtils;
 type
 
     TFieldInfo = class
@@ -16,6 +16,7 @@ type
       FProtocolName:String;
       FUsesStr:String;
       FHasArrayType:Boolean;
+      FProtocolID : Word;
       FFields : TObjectList<TFieldInfo>;
       function isRawType(const TypeName:String):Boolean;
       function GetFieldSerializeCode(FiledInfo : TFieldInfo ; Index : Integer = - 1):String;
@@ -25,10 +26,9 @@ type
       procedure AddField(const FieldName,DelphiType,OrginalStr:string);overload;
       procedure AddTo(InterfaceList , implList:TStringList);
       destructor Destroy;override;
+      property ProtocolID : Word read FProtocolID ;
+      property Name : string read FProtocolName;
     end;
-
-    var Templelate:TStringList;
-
 
 implementation
 
@@ -85,6 +85,12 @@ begin
   end;
 
   implList.Add('begin');
+
+  if FProtocolID > 0  then
+  begin
+    implList.Add(Format('  ByteArray.WriteWord(%d);',[FProtocolID]));
+  end;
+
   //开始序列化部分
   for i := 0 to FFields.Count - 1 do
   begin
@@ -114,6 +120,14 @@ begin
     implList.Add('  ArrayLen:Integer;');
   end;
   implList.Add('begin');
+
+
+  if FProtocolID > 0  then
+  begin
+    implList.Add('  ByteArray.ReadWord();');
+  end;
+
+
   for i := 0 to FFields.Count - 1 do
   begin
     FieldInfo := FFields[i];
@@ -135,8 +149,21 @@ begin
 end;
 
 constructor TRecordProtocol.Create(const TableName: String ; const usesStr , TypeType:String  );
+var
+  protocolStr : String;
 begin
   FProtocolName := TableName;
+  protocolStr := TStringUtil.StrBetween(TableName + ';','_',';');
+  FProtocolID := 0;
+  if protocolStr <> '' then
+  begin
+    FProtocolID := TStringUtil.LastInteger(TableName,0);
+    if FProtocolID = 0  then
+    begin
+      raise Exception.Create(Format('Parse Protocol Head Error , Can Not Get Protocol ID : %s',[TableName]));
+    end;
+  end;
+
   FFields := TObjectList<TFieldInfo>.Create;
   FUsesStr := usesStr;
 end;
@@ -190,17 +217,6 @@ begin
   end;
 
 end;
-
-var
- R : TResourceStream;
-
-initialization
-  Templelate := TStringList.Create;
-  R := TResourceStream.Create(HInstance,'DB','RC_DATA');
-  Templelate.LoadFromStream(R);
-  R.Free;
-finalization
-  Templelate.Free;
 
 
 end.

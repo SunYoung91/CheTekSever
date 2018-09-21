@@ -50,11 +50,12 @@
     <Transaction>2018/09/14 17:36:18.000.751,E:\CheTekSever\Tools\ProtocolGen\MysqlOP.pas=</Transaction>
     <Transaction>2018/09/14 17:36:25.000.443,E:\CheTekSever\Tools\ProtocolGen\DoubleDict.pas=</Transaction>
     <Transaction>2018/09/14 18:35:41.000.819,E:\CheTekSever\Tools\ProtocolGen\RecordProtocol.pas=E:\CheTekSever\Tools\ProtocolGen\TableCodeGen.pas</Transaction>
+    <Transaction>2018/09/20 18:49:12.000.359,E:\CheTekSever\Tools\ProtocolGen\DBTemplelate.pas=E:\CheTekSever\Tools\ProtocolGen\ProtocolHandleTemplelate.pas</Transaction>
+    <Transaction>2018/09/21 15:16:18.000.589,E:\CheTekSever\Tools\ProtocolGen\ProtocolHandleTemplelate.pas=</Transaction>
   </Transactions>
 	<ProjectSortOrder AutoSort="0" SortType="0">
     <File Path="DBCodeGenResource.rc"/>
     <File Path="GenCode.pas"/>
-    <File Path="DBTemplelate.pas"/>
     <File Path="RecordProtocol.pas"/>
   </ProjectSortOrder>
 </BorlandProject>

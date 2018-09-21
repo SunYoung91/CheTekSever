@@ -10,7 +10,6 @@ program ProtocolGen;
 uses
   System.SysUtils,
   GenCode in 'GenCode.pas',
-  DBTemplelate in 'DBTemplelate.pas',
   RecordProtocol in 'RecordProtocol.pas';
 
 begin
