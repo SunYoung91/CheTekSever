@@ -4,7 +4,7 @@ interface
 uses
   StringPool,System.Classes,
   DelphiAST, DelphiAST.Writer, DelphiAST.Classes,DelphiAst.Consts,
-  SimpleParser.Lexer.Types, IOUtils, Diagnostics,System.SysUtils,DB,System.Generics.Collections,MysqlOP,JclStrings,RecordProtocol,StringUtils,System.Types;
+  SimpleParser.Lexer.Types, IOUtils, Diagnostics,System.SysUtils,DB,System.Generics.Collections,JclStrings,RecordProtocol,StringUtils,System.Types;
 
 const
   INSERT = 'INSERT';
@@ -26,6 +26,8 @@ type
       procedure ProcessTypeDecl(SyntaxTree: TSyntaxNode);
       function GetUsesString(SyntaxTree: TSyntaxNode):string;
       procedure Gen();
+      procedure GenDecodeUnit(Const UseStr : String);//生成Decode单元
+      procedure GenSenderUnit(const UseStr : String);//生成发送数据单元
     end;
 
 implementation
@@ -146,6 +148,7 @@ var
   None:Boolean;
   SourceDirName , HandleProtocolName:String;
   UseList:TStringList;
+  UnitName:String;
 begin
 
   Files := TDirectory.GetFiles(FSourceDir,'*.pas',TSearchOption.soTopDirectoryOnly);
@@ -177,7 +180,7 @@ begin
     end;
   end;
 
-  UseStr := UseStr + ' SocketInterface , System.Classes ; ';
+  UseStr := UseStr + ' SocketManager , System.Classes , CheTek.ByteArray , System.SysUtils; ';
 
 
   //处理所有协议 生成 协议处理文件。
@@ -225,14 +228,11 @@ begin
     //原来有的函数就算了
     if not InterfaceDict.TryGetValue(ProcName,None) then
     begin
-      ProcName := Format('procedure Handle_%s(Socket:ISocket;ByteArray:TCheTekByteArray);',[Protocol.Name]);
+      ProcName := Format('procedure Handle_%s(Player:TPlayObject ; Data : P%s ; SocketData:TSocketData);',[Protocol.Name,Protocol.Name]);
       InterfaceList.Add(ProcName);
       ImplList.Add('');
       ImplList.Add(ProcName);
-      ImplList.Add('var');
-      ImplList.Add('data : ' + Protocol.Name  + ';');
       ImplList.Add('begin');
-      ImplList.Add('  data.DeserializeFrom(ByteArray);');
       ImplList.Add('');
       ImplList.Add('end;');
     end;
@@ -252,7 +252,8 @@ begin
   List.Add('end.');
   List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
 
-  //处理总socket 协议接收部分。
+  (*
+  //处理Decode协议部分
   List.Clear;
   ImplList.Clear;
   for i := 0 to UseList.Count - 1 do
@@ -265,7 +266,9 @@ begin
   UseList.Insert(0,',');
 
   List.Assign(Templelate);
-  List.Text := StringReplace(List.Text,'{uses}',UseList.Text,[rfReplaceAll]);
+  //List.Text := StringReplace(List.Text,'{uses}',UseList.Text,[rfReplaceAll]);
+
+  List.Text := StringReplace(List.Text,'{uses}',',' + HandleProtocolName,[rfReplaceAll]);
   for i := 0 to High(ProtocolIDArray) do
   begin
     ID := ProtocolIDArray[i];
@@ -274,11 +277,188 @@ begin
     ImplList.Add(Format('ProcArray[%d] := %s ;',[ID,ProcName]));
   end;
 
+  UnitName := 'RegisterHanderProc_' + SourceDirName;
+
+  List[0] := 'unit ' + UnitName + ';';
+
   List.Text := StringReplace(List.Text,'{$PROTOCOLREGISTER}',ImplList.Text,[rfReplaceAll]);
-  TargetHandleProtocolFile := ExtractFilePath(TargetHandleProtocolFile) + '\RegisterHanderProc_' + SourceDirName + '.pas';
-  List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
+  TargetHandleProtocolFile := ExtractFilePath(TargetHandleProtocolFile) + '\' + UnitName + '.pas';
+  List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);    *)
   List.Free;
   UseList.Free;
+
+
+  GenDecodeUnit(UseStr);
+  GenSenderUnit(UseStr);
+end;
+
+procedure TCodeGen.GenDecodeUnit(Const UseStr : String);
+var
+  SourceFile , InterfaceList , ImplList , DecodeBlock:TStringList;
+  SourceDirName , UnitName , FileName: String;
+  I:Integer;
+  ID:Word;
+  ProtocolIDArray:TArray<Word>;
+  Protocol : TRecordProtocol;
+  ProcName , DisposeProcName:String;
+begin
+  SourceFile := TStringList.Create;
+  InterfaceList := TStringList.Create;
+  ImplList := TStringList.Create;
+  DecodeBlock := TStringList.Create;
+
+  SourceDirName := ExtractFileName(FSourceDir);
+  ProtocolIDArray := FProtocolDict.Keys.ToArray();
+  TArray.Sort<Word>(ProtocolIDArray);
+
+  for i := 0 to High(ProtocolIDArray) do
+  begin
+    ID := ProtocolIDArray[i];
+    if FProtocolDict.TryGetValue(ID,Protocol) then
+    begin
+      ProcName := Format('function Decode_%s(ByteArray:TCheTekByteArray):Pointer;',[Protocol.Name]);
+      //InterfaceList.Add(ProcName);
+      DecodeBlock.Add(Format(' DecodeProc[%d] := Decode_%s;',[ID,Protocol.Name]));
+      ImplList.Add(ProcName);
+      ImplList.Add('var');
+      ImplList.Add('  data : P' + Protocol.Name + ' ; ' );
+      ImplList.Add('begin');
+      ImplList.Add('  New(data); ');
+      ImplList.Add('  data^.DeserializeFrom(ByteArray); ');
+      ImplList.Add('  Result := data ;');
+      ImplList.Add('end;');
+
+      ProcName := Format('procedure Dispose_%s(Ptr:Pointer);',[Protocol.Name]);
+      DecodeBlock.Add(Format(' DisposeProc[%d] := Dispose_%s;',[ID,Protocol.Name]));
+      ImplList.Add(ProcName);
+      ImplList.Add('begin');
+      ImplList.Add(Format('  Dispose(P%s(Ptr));',[Protocol.Name]));
+      ImplList.Add('end;');
+    end else
+    begin
+      raise Exception.Create(Format('Cant Get Protocol , ID : %d , I:%d ',[ID,I]));
+    end;
+  end;
+
+  UnitName := 'Decode_' + SourceDirName;
+  ProcName := Format('procedure DoDecode_%s(ByteArray : TCheTekByteArray ;ID:Word; var Ptr:Pointer);',[SourceDirName]);
+  DisposeProcName :=  Format('procedure DoDispose_%s(ID:Word; Ptr:Pointer);',[SourceDirName]);
+  InterfaceList.Add(ProcName);
+  InterfaceList.Add(DisposeProcName);
+
+  SourceFile.Add('unit ' + UnitName + ';');
+  SourceFile.Add('interface');
+  SourceFile.Add('uses ' + UseStr);
+
+  SourceFile.AddStrings(InterfaceList);
+  SourceFile.Add('implementation');
+  SourceFile.Add('var DecodeProc : array[1..65535] of function(ByteArray:TCheTekByteArray):Pointer;');
+  SourceFile.Add('var DisposeProc : array[1..65535] of procedure(Ptr:Pointer);');
+
+
+  SourceFile.AddStrings(ImplList);
+  SourceFile.Add(ProcName);
+  SourceFile.Add('begin');
+  SourceFile.Add('  if Assigned(DecodeProc[ID]) then');
+  SourceFile.Add('  begin');
+  SourceFile.Add('    Ptr := DecodeProc[ID](ByteArray);');
+  SourceFile.Add('  end else');
+  SourceFile.Add('  begin');
+  SourceFile.Add('    Raise Exception.Create(''Procol Decode Proc not Exist : '' + IntToStr(ID))');
+  SourceFile.Add('  end;');
+  SourceFile.Add('end;');
+
+
+  SourceFile.Add(DisposeProcName);
+  SourceFile.Add('begin');
+  SourceFile.Add('  if Assigned(DisposeProc[ID]) then');
+  SourceFile.Add('  begin');
+  SourceFile.Add('    DisposeProc[ID](Ptr);');
+  SourceFile.Add('  end else');
+  SourceFile.Add('  begin');
+  SourceFile.Add('    Raise Exception.Create(''Procol Dispose Proc not Exist : '' + IntToStr(ID))');
+  SourceFile.Add('  end;');
+  SourceFile.Add('end;');
+
+
+  SourceFile.Add('initialization');
+  SourceFile.AddStrings(DecodeBlock);
+  SourceFile.Add('end.');
+  FileName := FTargetDir + '\' + UnitName + '.pas';
+  SourceFile.SaveToFile(FileName);
+
+  DecodeBlock.Free;
+  ImplList.Free;
+  InterfaceList.Free;
+  SourceFile.Free;
+end;
+
+procedure TCodeGen.GenSenderUnit(const UseStr: String);
+var
+  SourceFile , InterfaceList , ImplList , DecodeBlock:TStringList;
+  SourceDirName , UnitName , FileName: String;
+  I:Integer;
+  ID:Word;
+  ProtocolIDArray:TArray<Word>;
+  Protocol : TRecordProtocol;
+  ProcName , DisposeProcName:String;
+begin
+  SourceFile := TStringList.Create;
+  InterfaceList := TStringList.Create;
+  ImplList := TStringList.Create;
+  DecodeBlock := TStringList.Create;
+
+  SourceDirName := ExtractFileName(FSourceDir);
+  ProtocolIDArray := FProtocolDict.Keys.ToArray();
+  TArray.Sort<Word>(ProtocolIDArray);
+
+  for i := 0 to High(ProtocolIDArray) do
+  begin
+    ID := ProtocolIDArray[i];
+    if FProtocolDict.TryGetValue(ID,Protocol) then
+    begin
+      ProcName := Format('procedure Send(ID:Integer; var Data : %s);overload;',[Protocol.Name]);
+      InterfaceList.Add(ProcName);
+      ImplList.Add(ProcName);
+      ImplList.Add('var');
+      ImplList.Add('  Size:Integer;' );
+      ImplList.Add('  OldPos , NewPos:NativeInt;' );
+      ImplList.Add('  ByteArray:TCheTekByteArray;');
+      ImplList.Add('begin');
+      ImplList.Add('  ByteArray := UserEngine.m_SendBytes;  ');
+      ImplList.Add('  ByteArray.WriteInteger(ID); ');
+      ImplList.Add('  OldPos := ByteArray.Position;');
+      ImplList.Add('  ByteArray.WriteInteger(0);');
+      ImplList.Add('  Data.SerializeTo(ByteArray);');
+      ImplList.Add('  NewPos := ByteArray.Position;');
+      ImplList.Add('  Size := NewPos - OldPos - 4 ;');
+      ImplList.Add('  ByteArray.Position := OldPos;');
+      ImplList.Add('  ByteArray.WriteInteger(Size);');
+      ImplList.Add('  ByteArray.Position := NewPos;');
+      ImplList.Add('end;');
+    end else
+    begin
+      raise Exception.Create(Format('Cant Get Protocol , ID : %d , I:%d ',[ID,I]));
+    end;
+  end;
+
+  UnitName := 'Sender_' + SourceDirName;
+
+  SourceFile.Add('unit ' + UnitName + ';');
+  SourceFile.Add('interface');
+  SourceFile.Add('uses ' + UseStr);
+
+  SourceFile.AddStrings(InterfaceList);
+  SourceFile.Add('implementation');
+  SourceFile.AddStrings(ImplList);
+  SourceFile.Add('end.');
+  FileName := FTargetDir + '\' + UnitName + '.pas';
+  SourceFile.SaveToFile(FileName);
+
+  DecodeBlock.Free;
+  ImplList.Free;
+  InterfaceList.Free;
+  SourceFile.Free;
 end;
 
 function TCodeGen.GetFieldNodeInfo(SyntaxTree: TSyntaxNode; out FieldName,

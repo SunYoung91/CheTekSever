@@ -10,7 +10,8 @@ program ProtocolGen;
 uses
   System.SysUtils,
   GenCode in 'GenCode.pas',
-  RecordProtocol in 'RecordProtocol.pas';
+  RecordProtocol in 'RecordProtocol.pas',
+  CheTek.Pool in '..\..\CheTekCommon\CheTek.Pool.pas';
 
 begin
   try

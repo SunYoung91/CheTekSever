@@ -1,7 +1,7 @@
 ﻿unit RecordProtocol;
 
 interface
-uses MysqlOP,System.Generics.Collections,System.SysUtils,System.Classes,JclStrings,System.IOUtils,Utils,JclDateTime,StringUtils;
+uses System.Generics.Collections,System.SysUtils,System.Classes,JclStrings,System.IOUtils,Utils,JclDateTime,StringUtils;
 type
 
     TFieldInfo = class
@@ -10,7 +10,6 @@ type
       IsArray:Boolean;
       OrginalStr : String;
     end;
-
     TRecordProtocol = class
     private
       FProtocolName:String;
@@ -75,7 +74,7 @@ begin
   InterfaceList.Add('      procedure SerializeTo(ByteArray:TCheTekByteArray);');
   InterfaceList.Add('      procedure DeserializeFrom(ByteArray:TCheTekByteArray);');
   InterfaceList.Add('    end; ');
-
+  InterfaceList.Add(Format('    P%s = ^%s; ',[FProtocolName,FProtocolName]));
   implList.Add(Format('procedure %s.SerializeTo(ByteArray:TCheTekByteArray);',[FProtocolName]));
 
   if FHasArrayType then
@@ -122,10 +121,10 @@ begin
   implList.Add('begin');
 
 
-  if FProtocolID > 0  then
-  begin
-    implList.Add('  ByteArray.ReadWord();');
-  end;
+//  if FProtocolID > 0  then
+//  begin
+//    implList.Add('  ByteArray.ReadWord();');
+//  end;
 
 
   for i := 0 to FFields.Count - 1 do
@@ -211,7 +210,7 @@ begin
   RT := LowerCase(Trim(TypeName));
   Result := False;
   if (RT = 'string') or (RT = 'byte') or (RT = 'cardinal') or (RT = 'integer') or (RT = 'boolean') or (RT = 'uint64') or
-  (RT = 'int64') then
+  (RT = 'int64') or (rt = 'word') then
   begin
     Result := True;
   end;

@@ -1,16 +1,16 @@
 ﻿unit ProtocolHandleTemplelate;
 
 interface
-uses System.Classes,System.SysUtils,SocketInterface,CheTek.ByteArray{uses};
+uses System.Classes,System.SysUtils,SocketManager,CheTek.ByteArray{uses};
 
-procedure HandleSocket(Socket:ISocket;ByteArray:TCheTekByteArray;BodySize:Integer);
+procedure HandleSocket(Socket:TSocketData;ByteArray:TCheTekByteArray;BodySize:Integer);
 implementation
 type
-THandleProc = procedure (Socket:ISocket;ByteArray:TCheTekByteArray);
+THandleProc = procedure (Socket:TSocketData;ByteArray:TCheTekByteArray);
 var
   ProcArray : array[Word] of THandleProc;
 
-procedure HandleSocket(Socket:ISocket;ByteArray:TCheTekByteArray;BodySize:Integer);
+procedure HandleSocket(Socket:TSocketData;ByteArray:TCheTekByteArray;BodySize:Integer);
 var
   ID:Word;
   OldPosition : NativeUInt;
@@ -27,7 +27,7 @@ begin
     //
   end;
 
-  NowPosition = ByteArray.Position;
+  NowPosition := ByteArray.Position;
 
   ReadSize := NowPosition - OldPosition;
 
