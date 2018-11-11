@@ -36,6 +36,7 @@ type
     procedure WriteInt64(value:Int64);
     procedure WriteUInt64(value:Int64);
     procedure WriteCardinal(value:Cardinal);
+    procedure WriteBoolean(value:Boolean);
 
     function WriteStream(Source:TStream;ToCount:NativeUInt = 0):NativeUInt;
 
@@ -47,7 +48,10 @@ type
     function ReadByte: Byte;
     function ReadWord: Word;
     function ReadString():String;
+    function ReadBoolean():Boolean;
     function WriteToStream(Source:TStream;ToCount:NativeUInt = 0):NativeUInt;
+
+    procedure SaveToFile(const FileName:String);
 
     //截断数据长度为0
     procedure Trunc();
@@ -131,6 +135,7 @@ begin
   if ReadSize > 0 then
   begin
     Result := Min(Size, ReadSize);
+    Move(PByte(NativeUInt(FMemory) + FPosition)^,Buf^, Result);
     Inc(FPosition,Result);
   end;
 end;
@@ -161,6 +166,7 @@ begin
     Move(PByte(UInt(FMemory) + DeleteSize)^, FMemory^, FSize - DeleteSize);
 
   Dec(FSize, DeleteSize);
+  Dec(FPosition,DeleteSize);
   Result := DeleteSize;
 end;
 
@@ -192,6 +198,7 @@ begin
   if BytesLen > 0 then
   begin
     SetLength(Bytes,BytesLen);
+    Read(Bytes,BytesLen);
     Result := TEncoding.UTF8.GetString(Bytes);
   end else
   begin
@@ -209,6 +216,11 @@ begin
   Read(@Result, Sizeof(Int64));
 end;
 
+function TCheTekByteArray.ReadBoolean: Boolean;
+begin
+  Read(@Result, Sizeof(Boolean));
+end;
+
 function TCheTekByteArray.ReadByte: Byte;
 begin
   Read(@Result, Sizeof(Result));
@@ -222,6 +234,15 @@ end;
 function TCheTekByteArray.ReadWord: Word;
 begin
   Read(@Result, Sizeof(Result));
+end;
+
+procedure TCheTekByteArray.SaveToFile(const FileName: String);
+var
+  FileStream : TFileStream;
+begin
+  FileStream := TFileStream.Create(FileName,fmCreate);
+  WriteToStream(FileStream);
+  FileStream.Free;
 end;
 
 procedure TCheTekByteArray.SizeAdd(Value: UInt);
@@ -239,6 +260,11 @@ procedure TCheTekByteArray.Trunc;
 begin
   FSize := 0;
   FPosition := 0;
+end;
+
+procedure TCheTekByteArray.WriteBoolean(value: Boolean);
+begin
+  Write(@value,1);
 end;
 
 procedure TCheTekByteArray.WriteByte(value: Byte);

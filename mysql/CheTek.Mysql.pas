@@ -69,7 +69,7 @@ type
   end;
 
   //发生错误的回调函数 通过 SetErrorProc 绑定一个回调函数 当出现错误可以立马打印出来
-  TMySqlErrorFunction = procedure(sText: String; nType: Integer);
+  TMySqlErrorFunction = procedure(const Error: String; ErrorCode: Integer);
 
   TMySql = class(TBaseObject)
   private
@@ -83,6 +83,7 @@ type
     m_sErrorDesc: String; //错误描述
     m_sQueryErrorText: String; //上一次执行 Query 或者 Exec 类的Sql指令
     m_boIsUtf8ChrSet:Boolean;//是否utf8编码
+
     procedure SetCharSet(const Value: String);
     procedure OnAfterQuery(nError: integer);
     function OnAfterExec(nError: integer): Integer; //返回值 为影响行数
@@ -121,6 +122,8 @@ type
 
     procedure ResetQuery(); //重置查询释放资源
 
+    procedure OutLog(ErrorCode:Integer;const Desc:String);
+
     function SetDataBase(const Value: string): Boolean; //修改DB连接
     property CharSet: string read m_sCharSet write SetCharSet; //设置字符集
     property ClientVer: string read m_sClientVer;
@@ -129,21 +132,22 @@ type
     property ResultRow: TMysqlRow read m_QueryResult; //得到查询后的返回 这个对象会自动管理
     property ErrorDesc: string read m_sErrorDesc;
 
+  private
+    class var ErrorProc : TMySqlErrorFunction;
    public
     class procedure SetErrorProc(proc: TMySqlErrorFunction);
+    class Function Quote(const Str:String):String;
   end;
 
 
 
 implementation
 
-var
-  g_ProcError: TMySqlErrorFunction; //错误输出函数
-  //g_arrFieldData: array of TMYSQL_FIELD; //存储Mysql 的字段属性的数组
+//g_arrFieldData: array of TMYSQL_FIELD; //存储Mysql 的字段属性的数组
 
 class procedure TMySql.SetErrorProc(proc: TMySqlErrorFunction);
 begin
-  g_ProcError := proc;
+  ErrorProc := proc;
 end;
 
 function TMySql.GetCreateTableSql(const TableName :String; var Str: TStrings):Boolean;
@@ -220,10 +224,7 @@ begin
   except
     on E: Exception do
     begin
-      if Assigned(g_ProcError) then
-      begin
-        g_ProcError('TMySql.Create ' + E.Message, 0);
-      end;
+        OutLog(0, 'TMySql.Create ' + E.Message);
     end;
   end;
 
@@ -286,6 +287,14 @@ begin
   end;
 end;
 
+procedure TMySql.OutLog(ErrorCode: Integer; const Desc: String);
+begin
+  if Assigned(ErrorProc) then
+  begin
+    ErrorProc(Desc, ErrorCode)
+  end;
+end;
+
 function TMySql.Query(const SqlText: string): TMysqlRow;
 var
   nCount: Integer;
@@ -299,6 +308,11 @@ begin
    end;
 end;
 
+class function TMySql.Quote(const Str: String): String;
+begin
+  Result := '''' + Str + '''';
+end;
+
 procedure TMySql.RaiseError(nError: Integer; nType: Integer = 0);
 var
   sError: String;
@@ -310,9 +324,9 @@ end;
 procedure TMySql.RaiseError(sDesc: string; nType: Integer = 0);
 begin
   m_sErrorDesc := sDesc;
-  if Assigned(g_ProcError) then
+  if Assigned(ErrorProc) then
   begin
-    g_ProcError(sDesc, nType)
+    ErrorProc(sDesc, nType)
   end;
 end;
 

@@ -75,7 +75,8 @@
         <DCC_RemoteDebug>true</DCC_RemoteDebug>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <Debugger_RunParams>D:\llifework\llife\protocol\C2S D:\llifework\llife\M2Engine\protocol\C2S</Debugger_RunParams>
+        <DCC_UnitSearchPath>D:\llifework\llife\Common\GameSDK;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <Debugger_RunParams>D:\llifework\llife\protocol\S2C D:\llifework\llife\Client\protocol\S2C true</Debugger_RunParams>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
     </PropertyGroup>

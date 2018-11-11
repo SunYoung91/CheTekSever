@@ -13,14 +13,12 @@ uses
   DB_Schema in 'Test\DB_Schema.pas',
   AttrType in 'Test\AttrType.pas',
   MysqlOP in 'MysqlOP.pas',
-  DoubleDict in 'DoubleDict.pas',
   DBTemplelate in 'DBTemplelate.pas',
   TableCodeGen in 'TableCodeGen.pas',
   DBRecordBase in '..\..\mysql\DBRecordBase.pas',
   CheTek.DBEngine in '..\..\mysql\CheTek.DBEngine.pas',
   CheTek.Mysql in '..\..\mysql\CheTek.Mysql.pas',
-  FieldData in 'FieldData.pas',
-  Utils in 'Utils.pas';
+  FieldData in 'FieldData.pas';
 
 begin
   try

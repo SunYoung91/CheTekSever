@@ -43,7 +43,7 @@
     <Transaction>2018/06/25 21:44:37.000.608,E:\CheTekSever\Tools\DBCodeGen\Unit1.pas=E:\CheTekSever\Tools\DBCodeGen\Utils.pas</Transaction>
   </Transactions>
 	<ProjectSortOrder AutoSort="0" SortType="0">
-    <File Path="E:\CheTekSever"/>
+    <File Path="D:\CheTekSever"/>
     <File Path="..\..\mysql"/>
     <File Path="..\..\mysql\CheTek.DBEngine.pas"/>
     <File Path="..\..\mysql\CheTek.Mysql.pas"/>
@@ -53,11 +53,9 @@
     <File Path="Test\DB_Schema.pas"/>
     <File Path="DBCodeGenResource.rc"/>
     <File Path="DBTemplelate.pas"/>
-    <File Path="DoubleDict.pas"/>
+    <File Path="FieldData.pas"/>
     <File Path="GenCode.pas"/>
     <File Path="MysqlOP.pas"/>
     <File Path="TableCodeGen.pas"/>
-    <File Path="FieldData.pas"/>
-    <File Path="Utils.pas"/>
   </ProjectSortOrder>
 </BorlandProject>

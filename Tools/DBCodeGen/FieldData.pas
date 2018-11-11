@@ -130,7 +130,7 @@ begin
         MysqlType := 'json'; //没有合适的类型将其解析为json
       end;
 
-      if (mopPrimaryKey in FMysqlOps) and (LowerCase(FDelphiType) = 'string') then
+      if ((mopPrimaryKey in FMysqlOps) or (mopUnikey in FMysqlOps)) and (LowerCase(FDelphiType) = 'string') then
       begin
         if (FLength > (65535 div 4)) or (FLength < 1) then
         begin

@@ -48,17 +48,17 @@ begin
        begin
           if Query(Format('CREATE DATABASE IF NOT EXISTS %s default charset utf8mb4 COLLATE utf8mb4_unicode_ci',[FDataBase])) <> nil then
           begin
-            OutPutInfo(Format('Create DataBase :%s sucess ',[FDataBase]));
+            OutLog(0,Format('Create DataBase :%s sucess ',[FDataBase]));
             if SetDataBase(FDataBase) then
             begin
-              OutPutInfo(Format('Change DataBase :%s sucess ',[FDataBase]));
+               OutLog(0,Format('Change DataBase :%s sucess ',[FDataBase]));
             end else
             begin
-              OutPutError(Format('Create Data Base: %s , can not change to DataBase :%s',[FDataBase,FDataBase]));
+               OutLog(0,Format('Create Data Base: %s , can not change to DataBase :%s',[FDataBase,FDataBase]));
             end;
           end else
           begin
-            OutPutError(Format('Can not Create Data Base: %s , maybe permission is not allow ',[FDataBase]));
+            OutLog(0,Format('Can not Create Data Base: %s , maybe permission is not allow ',[FDataBase]));
           end;
        end;
 
@@ -107,14 +107,14 @@ begin
             Sql := Format('ALTER TABLE `%s` ADD COLUMN `%s` %s;',[TableName,FieldName,GenFieldInfo.FieldType]);
             if  Query(Sql) = nil then
             begin
-              OutPutError(Format('CheckTableStruct Cant Add Field :%s , Sql Error , %s , %s ' ,[FieldName,Sql,ErrorDesc] ));
+              OutLog(0 , Format('CheckTableStruct Cant Add Field :%s , Sql Error , %s , %s ' ,[FieldName,Sql,ErrorDesc] ));
             end else
             begin
-              OutPutInfo(Format(' %s Add  Field : %s ,Type: %s SUCESS!',[TableName,FieldName,GenFieldInfo.FieldType] ));
+              OutLog(0 , Format(' %s Add  Field : %s ,Type: %s SUCESS!',[TableName,FieldName,GenFieldInfo.FieldType] ));
             end;
           end else
           begin
-            OutPutError( Format('CheckTableStruct Can not Get Filed Mysql Desc, Field : %s'  , [FieldName] ));
+            OutLog(0 , Format('CheckTableStruct Can not Get Filed Mysql Desc, Field : %s'  , [FieldName] ));
           end;
         end else
         begin
@@ -141,7 +141,7 @@ begin
                 AllowChange := True;
               end else
               begin
-                OutPutError( Format('CheckTableStruct FieldLength Not Allow Change To Samller , Field : %s' ,[FieldName] ));
+                OutLog( 0 ,  Format('CheckTableStruct FieldLength Not Allow Change To Samller , Field : %s' ,[FieldName] ));
               end;
 
             end else
@@ -150,27 +150,31 @@ begin
               //类型变了 可能是 int 变成 String 也可能是 tiny int 等变成其他的
               if not MysqlTypeLevel.TryGetValue(RealDBFieldType,DBFieldLevel) then
               begin
-                OutPutError( Format('CheckTableStruct Cant find mysql Level Define , Field : %d Type : %s' ,[FieldName,RealDBFieldType] ));
+                OutLog( 0 ,  Format('CheckTableStruct Cant find mysql Level Define , Field : %d Type : %s' ,[FieldName,RealDBFieldType] ));
                 Exit;
               end;
 
               if not MysqlTypeLevel.TryGetValue(RealGenDBFieldType,GenFieldLevel) then
               begin
-                OutPutError( Format('CheckTableStruct Cant find mysql Level Define , Field : %d Type : %s' ,[FieldName,RealGenDBFieldType] ));
+                OutLog( 0 ,  Format('CheckTableStruct Cant find mysql Level Define , Field : %d Type : %s' ,[FieldName,RealGenDBFieldType] ));
                 Exit;
               end;
 
 
               if (GenFieldLevel div 100) <> (DBFieldLevel div 100) then
               begin
-                OutPutError( Format('CheckTableStruct Cant  mysql Level type not the same , %d , %d ' ,[GenFieldLevel,DBFieldLevel] ));
+                OutLog( 0 ,  Format('CheckTableStruct Cant  mysql Level type not the same , %d , %d ' ,[GenFieldLevel,DBFieldLevel] ));
                 Exit;
               end;
 
               if (GenFieldLevel mod 100) <= (DBFieldLevel mod 100) then
               begin
-                OutPutError( Format('CheckTableStruct Cant  mysql Level type not allow down level , %d , %d ' ,[GenFieldLevel,DBFieldLevel] ));
-                Exit;
+                //varchar 跟text 的转换总应该是允许的
+                if (GenFieldLevel <> 101) and (DBFieldLevel <> 101) then
+                begin
+                  OutLog( 0 ,  Format('CheckTableStruct Cant  mysql Level type not allow down level , %d , %d ' ,[GenFieldLevel,DBFieldLevel] ));
+                  Exit;
+                end;
               end;
 
               AllowChange := True;
@@ -181,7 +185,7 @@ begin
               Sql := Format('ALTER TABLE `%s` MODIFY COLUMN `%s` %s;',[TableName,FieldName,GenFieldInfo.FieldType]);
               if  Query(Sql) = nil then
               begin
-                OutPutError(Format('CheckTableStruct Cant Query Modify Sql Error , %s , %d ' ,[Sql,ErrorDesc] ));
+                OutLog( 0 , Format('CheckTableStruct Cant Query Modify Sql Error , %s , %d ' ,[Sql,ErrorDesc] ));
               end else
               begin
                 OutPutInfo(Format(' %s Update Field : %s ,Type:  %s ->%s SUCESS!',[TableName,FieldName,DBFieldInfo.FieldType,GenFieldInfo.FieldType] ));
@@ -193,7 +197,7 @@ begin
               Sql := Format('ALTER TABLE `%s` MODIFY COLUMN `%s` %s comment %s ;',[TableName,FieldName,GenFieldInfo.FieldType,GenFieldInfo.Comment]);
               if Query(Sql) = nil then
               begin
-                OutPutError(Format('CheckTableStruct Cant Query Modify Sql Error , %s , %d ' ,[Sql,ErrorDesc] ));
+                OutLog( 0 , Format('CheckTableStruct Cant Query Modify Sql Error , %s , %d ' ,[Sql,ErrorDesc] ));
               end else
               begin
                 OutPutInfo(Format(' %s Update Field %s , comment : %s ->%s SUCESS!',[TableName,FieldName,DBFieldInfo.Comment,GenFieldInfo.Comment] ));
@@ -209,7 +213,7 @@ begin
     End;
   end else
   begin
-    OutPutError('CheckTableStruct Can not find tableclass :' + TableName );
+    OutLog( 0 , 'CheckTableStruct Can not find tableclass :' + TableName );
   end;
 end;
 
@@ -234,12 +238,12 @@ begin
       //CreateTableSql.SaveToFile('D:\Sql.sql');
       if Query(CreateTableSql.Text) = nil then
       begin
-        OutPutError('CreateTableSql Error:, Class : ' + TableName + ' , MysqlError:' + ErrorDesc);
+        OutLog( 0 , 'CreateTableSql Error:, Class : ' + TableName + ' , MysqlError:' + ErrorDesc);
       end;
       CreateTableSql.Free;
   end else
   begin
-    OutPutError('Can not get Table Class : ' + TableName);
+    OutLog( 0 , 'Can not get Table Class : ' + TableName);
   end;
 end;
 

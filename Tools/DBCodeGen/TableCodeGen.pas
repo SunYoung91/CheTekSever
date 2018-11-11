@@ -33,6 +33,7 @@ type
       function GetRecordInDataBaseCodeText():String;
       function GetInsertOrUpdateCodeText():String;
       function GetAddToEngineCodeText():String;
+      function GetAssignProcCodeText():String;
     public
       constructor Create(const TableName:String ;const usesStr ,TypeType:String );
       procedure AddField(const FieldName,DelphiType,ControlString:string);overload;
@@ -86,7 +87,7 @@ begin
     OP := GetMysqlOP(OpType);
 
     //如果String 类型的作为了 主键 那么 必须指定长度 否则 将无法创表 这个是mysql的限制
-    if (OP = mopPrimaryKey) and (LowerCase(DelphiType) = 'string') then
+    if ((OP = mopPrimaryKey) or (OP = mopUnikey)) and (LowerCase(DelphiType) = 'string') then
     begin
       FieldData.Length := StrToIntDef(StrBetween(OpStr,'(',')'),-1);
     end;
@@ -275,6 +276,25 @@ begin
    SourceText.Free;
 end;
 
+function TDBTable.GetAssignProcCodeText: String;
+
+  var
+  SourceText : TStringList;
+  FieldData:TFieldData;
+  OP:TFieldCodeOp;
+  Text:String;
+begin
+   SourceText := TStringList.Create;
+   SourceText.Add('begin');
+   for FieldData in FFields do
+   begin
+     SourceText.Add(_WD(2) +  Format('Self.%s := Data.%s;',[FieldData.FieldName,FieldData.FieldName]));
+   end;
+   SourceText.Add('end;');
+   Result := SourceText.Text;
+   SourceText.Free;
+end;
+
 function TDBTable.GetClassName: String;
 begin
   Result := 'TDBRecordOf' + FTableName;
@@ -284,11 +304,13 @@ function TDBTable.GetCreateTableSql: TStringList;
 Var
   FieldData:TFieldData;
   PrimaryKey : String;
+  UnqueKey:String;
   Str:String;
 begin
   Result := TStringList.Create;
   Result.Add(Format('CREATE TABLE `%s` (',[FTableName]));
   PrimaryKey := '';
+  UnqueKey := '';
   for FieldData in FFields do
   begin
     Result.Add(FieldData.GetMysqlCloumnDesc());
@@ -296,6 +318,12 @@ begin
     begin
       PrimaryKey := PrimaryKey + Format('`%s`,',[FieldData.FieldName]);
     end;
+
+    if mopUnikey in FieldData.MysqlOps then
+    begin
+      UnqueKey := UnqueKey + Format('`%s`,',[FieldData.FieldName]);
+    end;
+
   end;
 
   //有主键
@@ -303,6 +331,12 @@ begin
   begin
     PrimaryKey := Copy(PrimaryKey,1,Length(PrimaryKey) - 1); //删掉最后一个逗号
     Result.Add(Format('PRIMARY KEY (%s),',[PrimaryKey]));
+  end;
+
+  if UnqueKey <> '' then
+  begin
+    UnqueKey := Copy(UnqueKey,1,Length(UnqueKey) - 1); //删掉最后一个逗号
+    Result.Add(Format('UNIQUE (%s),',[UnqueKey]));
   end;
 
 
@@ -650,6 +684,14 @@ var
       Result := 'class procedure ' + GetClassName()+'.AddToDBEngine();'
   end;
 
+  function GetAssignProcName(isDefine : Boolean):String;
+  begin
+    if isDefine then
+      Result := Format('procedure Assign( data : %s);',[GetClassName()])
+    else
+      Result := Format('procedure %s.Assign( data : %s);',[GetClassName(),GetClassName()]);
+  end;
+
 
   function GetFileName():string;
   begin
@@ -726,6 +768,8 @@ begin
   Define.Add(_WD(4) + GetRecordInDataBaseProcName(true));
   Define.Add(_WD(4) + GetInsertOrUpDateProcName(true));
   Define.Add(_WD(4) + GetAddToDBEngineProcName(true));
+  Define.Add(_WD(4) + GetAssignProcName(true));
+
 
 
   GetQueryFuncNameDefine(Define);
@@ -754,6 +798,9 @@ begin
   //加入Featch函数。
   implement.Add(GetFeatchProcName(False));
   implement.Append(GetFeatchProcCodeText());
+
+  implement.Add( GetAssignProcName(False));
+  implement.Append(GetAssignProcCodeText());
 
   //加入Featch函数。
   implement.Add(GetFeatchRecordProcName(False));
