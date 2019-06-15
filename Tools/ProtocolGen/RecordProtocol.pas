@@ -85,9 +85,22 @@ begin
   begin
     implList.Add('var');
     implList.Add('  I:Integer;');
+	implList.add('#IFDEF DEBUG');
+	implList.add( 'oldPosition : NativeInt' );
+	implList.add('#ENDIF');
+  end else
+  begin
+	implList.add('#IFDEF DEBUG');
+	implList.Add('var');
+	implList.add( 'oldPosition : NativeInt' );
+	implList.add('#ENDIF');
   end;
 
   implList.Add('begin');
+  
+  implList.add('#IFDEF DEBUG');
+  implList.add('oldPosition := ByteArray.Position;');
+  implList.add('#ENDIF');
 
   if FProtocolID > 0  then
   begin
@@ -119,6 +132,11 @@ begin
     end;
 
   end;
+  
+  implList.add('#IFDEF DEBUG');
+  implList.add('if ByteArray.Position - oldPosition <> GetSerializeSize() then ');
+  implList.add('	Raise Exception.CreateFmt('' ' +FProtocolName + ', Serialize format error , GetSerializeSize : %d , WriteSize : %d '',[GetSerializeSize() , ByteArray.Position - oldPosition]); ');
+  implList.add('#ENDIF');
 
   implList.Add('end;');
 
