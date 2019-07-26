@@ -18,11 +18,6 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
-    <PropertyGroup Condition="('$(Platform)'=='Win64' and '$(Base)'=='true') or '$(Base_Win64)'!=''">
-        <Base_Win64>true</Base_Win64>
-        <CfgParent>Base</CfgParent>
-        <Base>true</Base>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
         <Cfg_1>true</Cfg_1>
         <CfgParent>Base</CfgParent>
@@ -62,10 +57,6 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <DCC_UsePackage>dxBarRS22;dxSkinsdxRibbonPainterRS22;dxSkinOffice2010BlackRS22;dxRibbonCustomizationFormRS22;FireDACPgDriver;dxGaugeControlRS22;dxPScxVGridLnkRS22;RaizeComponentsVcl;DBXInterBaseDriver;DataSnapServer;DataSnapCommon;vclAbsDBd22;dxWizardControlRS22;DbxCommonDriver;vclimg;dbxcds;dxServerModeRS22;DatasnapConnectorsFreePascal;appanalytics;dxHttpIndyRequestRS22;vcldb;dxSkinDarkRoomRS22;dxSkinSilverRS22;dxGDIPlusRS22;CustomIPTransport;dxSkinOffice2010SilverRS22;dsnap;IndyIPServer;IndyCore;dxSkinSummer2008RS22;CloudService;dxSkinLondonLiquidSkyRS22;FmxTeeUI;FireDACIBDriver;dclAbsDBd22;dxPScxPivotGridLnkRS22;dxComnRS22;cxPivotGridChartRS22;dsnapxml;dxSpellCheckerRS22;FireDACDb2Driver;dxPScxGridLnkRS22;dxPScxPCProdRS22;dxSkinVS2010RS22;dxorgcRS22;dxBarExtItemsRS22;dxRibbonRS22;dxSkinVisualStudio2013DarkRS22;dxSkinsdxBarPainterRS22;dxPSdxGaugeControlLnkRS22;dxCoreRS22;cxVerticalGridRS22;bindcompfmx;dxSkinStardustRS22;dxSkinSevenClassicRS22;dxSkinsCoreRS22;dxSpreadSheetRS22;FireDACODBCDriver;RESTBackendComponents;cxSchedulerRS22;dbrtl;dxSkinDevExpressStyleRS22;FireDACCommon;bindcomp;inetdb;cxExportRS22;dxPSDBTeeChartRS22;dxSkinOffice2007BlackRS22;dxSkinXmas2008BlueRS22;dxSkinCoffeeRS22;DBXOdbcDriver;dxSkinscxSchedulerPainterRS22;ibmonitor;vclFireDAC;xmlrtl;ibxpress;dxSkinOffice2013WhiteRS22;dxPSdxDBOCLnkRS22;cxDataRS22;FireDACCommonDriver;soaprtl;bindengine;vclactnband;FMXTee;dxSkinVisualStudio2013LightRS22;bindcompvcl;dxBarExtDBItemsRS22;dxSkinOffice2010BlueRS22;vclie;dxPSdxDBTVLnkRS22;cxPageControlRS22;dxPsPrVwAdvRS22;FireDACMSSQLDriver;DBXInformixDriver;dxSkinFoggyRS22;Intraweb;dxSkinPumpkinRS22;cxEditorsRS22;dxPScxExtCommonRS22;DataSnapServerMidas;dxSkinVisualStudio2013BlueRS22;dsnapcon;DBXFirebirdDriver;dxPSPrVwRibbonRS22;inet;dxSkinSharpRS22;dxMapControlRS22;dxmdsRS22;FireDACMySQLDriver;soapmidas;vclx;dxSkinOffice2007GreenRS22;dxSkinMetropolisDarkRS22;DBXSybaseASADriver;dxDockingRS22;RESTComponents;dxTabbedMDIRS22;dxdborRS22;dxSkinMoneyTwinsRS22;dbexpress;dxPScxTLLnkRS22;IndyIPClient;dxSkinOffice2016DarkRS22;dxSkinSpringTimeRS22;FireDACTDataDriver;FireDACSqliteDriver;FireDACDSDriver;DBXSqliteDriver;dxSkinHighContrastRS22;dxSkinOffice2007SilverRS22;fmx;dxPSdxFCLnkRS22;dxLayoutControlRS22;IndySystem;dxSkinOffice2007PinkRS22;TeeDB;tethering;cxSchedulerGridRS22;dxSkinMcSkinRS22;vclib;DataSnapClient;dxSkinsdxNavBarPainterRS22;dxNavBarRS22;DataSnapProviderClient;DBXSybaseASEDriver;dxSkinGlassOceansRS22;dxSkinBlueprintRS22;dxSkinLilianRS22;dxSkinBlueRS22;vcldsnap;dxBarDBNavRS22;dxSkiniMaginaryRS22;dxPSCoreRS22;dxSkinLiquidSkyRS22;dxPSRichEditControlLnkRS22;fmxFireDAC;DBXDb2Driver;dxSkinOffice2007BlueRS22;dxSkinCaramelRS22;DBXOracleDriver;cxGridRS22;vclribbon;fmxase;vcl;DBXMSSQLDriver;IndyIPCommon;dxThemeRS22;clinetsuitedXE8;DataSnapFireDAC;FireDACDBXDriver;cxPivotGridRS22;dxPScxSchedulerLnkRS22;soapserver;dxSkinscxPCPainterRS22;dxtrmdRS22;inetdbxpress;FireDACInfxDriver;dxFireDACServerModeRS22;adortl;cxLibraryRS22;dxPSdxSpreadSheetLnkRS22;dxPSdxLCLnkRS22;FireDACASADriver;dxSkinOffice2013DarkGrayRS22;dxPScxCommonRS22;RaizeComponentsVclDb;emsclientfiredac;rtl;DbxClientDriver;dxSkinOffice2013LightGrayRS22;Tee;dxDBXServerModeRS22;dxFlowChartRS22;dxPSLnksRS22;dxRichEditControlRS22;dxSkinSharpPlusRS22;dxSkinDarkSideRS22;DataSnapNativeClient;cxTreeListdxBarPopupMenuRS22;dxSkinsdxDLPainterRS22;dxSkinDevExpressDarkStyleRS22;dxSkinValentineRS22;IndyProtocols;DBXMySQLDriver;dxSkinMetropolisRS22;dxPSdxOCLnkRS22;bindcompdbx;TeeUI;dxSkinOffice2016ColorfulRS22;cxTreeListRS22;dxSkinTheAsphaltWorldRS22;FireDACADSDriver;vcltouch;dxADOServerModeRS22;emsclient;dxdbtrRS22;VclSmp;FireDAC;VCLRESTComponents;dxSkinSevenRS22;cxSchedulerRibbonStyleEventEditorRS22;dxTileControlRS22;DataSnapConnectors;dxSkinBlackRS22;fmxobj;dxSkinWhiteprintRS22;dxPSTeeChartRS22;cxPivotGridOLAPRS22;cxSchedulerTreeBrowserRS22;FireDACOracleDriver;fmxdae;FireDACMSAccDriver;DataSnapIndy10ServerTransport;$(DCC_UsePackage)</DCC_UsePackage>
-        <DCC_ConsoleTarget>true</DCC_ConsoleTarget>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
         <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
@@ -76,7 +67,7 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <DCC_UnitSearchPath>D:\llifework\llife\Common\GameSDK;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <Debugger_RunParams>D:\llifework\llife\protocol\S2C D:\llifework\llife\Client\protocol\S2C true</Debugger_RunParams>
+        <Debugger_RunParams>E:\DProtoBuf E:\DProtoBuf\Gen true</Debugger_RunParams>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_RemoteDebug>false</DCC_RemoteDebug>
     </PropertyGroup>
@@ -519,12 +510,11 @@
                 <ProjectRoot Platform="Win32" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
-                <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME).app"/>
             </Deployment>
             <Platforms>
                 <Platform value="Win32">True</Platform>
-                <Platform value="Win64">False</Platform>
             </Platforms>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>

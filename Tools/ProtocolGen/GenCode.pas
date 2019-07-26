@@ -2,7 +2,7 @@ unit GenCode;
 
 interface
 uses
-  StringPool,System.Classes,
+  StringPool,System.Classes,Winapi.Windows,
   DelphiAST, DelphiAST.Writer, DelphiAST.Classes,DelphiAst.Consts,
   SimpleParser.Lexer.Types, IOUtils, Diagnostics,System.SysUtils,DB,System.Generics.Collections,JclStrings,RecordProtocol,StringUtils,System.Types,Vcl.Dialogs;
 
@@ -23,6 +23,7 @@ type
       Function GetFieldNodeInfo(SyntaxTree: TSyntaxNode;out FieldName,FieldType,ControlString:String):Boolean;
     public
       constructor Create(const SourceDir,TargetDir:String;IsS2C:String);
+
       procedure BuildTargetFile(const SourceFileName:String ; SyntaxTree: TSyntaxNode);
       function FindInterfaceNode(SyntaxTree: TSyntaxNode):TSyntaxNode;
       procedure ProcessTypeDecl(SyntaxTree: TSyntaxNode;const FileName:String);
@@ -30,10 +31,14 @@ type
       procedure Gen();
       procedure GenDecodeUnit(Const UseStr : String);//生成Decode单元
       procedure GenSenderUnit(const UseStr : String);//生成发送数据单元
+      procedure GenProtoBuffProto();  //生成protobuf 文件
+      procedure GenProtoBufConvertCode();//生成 结构体转 protobuf 类的代码。
+      procedure GenProtoBufUtilsCode(); //生成 protobuf 结构体和 一些杂项工具单元
+
     end;
 
 implementation
-
+uses uProtoBufGenerator,uProtoBufParserClasses;
 {$R DBCodeGenResource.res}
 { TCodeGen }
 
@@ -168,7 +173,7 @@ begin
     if FileName <> 'HandleProtocol.pas' then
     begin
       UseStr := UseStr + StrBefore('.',FileName) + ',';
-      FSource.LoadFromFile(Files[i]);
+      FSource.LoadFromFile(Files[i],TUTF8Encoding.UTF8);
       SyntaxTree := nil;
       HasException := False;
       try
@@ -324,7 +329,7 @@ begin
 
     List.Add('end.');
 
-    List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
+    //List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
 
   end;
 
@@ -378,7 +383,7 @@ begin
   List.AddStrings(HandlerInitProc);
 
   List.Add('end.');
-  List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
+  //List.SaveToFile(TargetHandleProtocolFile,TEncoding.UTF8);
 
 
   HandlerInitProc.Free;
@@ -386,8 +391,14 @@ begin
   UseList.Free;
   UsesList.Free;
 
-  GenDecodeUnit(UseStr);
-  GenSenderUnit(SenderUseStr);
+  //GenDecodeUnit(UseStr);
+  //GenSenderUnit(SenderUseStr);
+
+
+  GenProtoBuffProto();
+  GenProtoBufConvertCode();
+
+  GenProtoBufUtilsCode();
 end;
 
 procedure TCodeGen.GenDecodeUnit(Const UseStr : String);
@@ -513,6 +524,242 @@ begin
   ImplList.Free;
   InterfaceList.Free;
   SourceFile.Free;
+end;
+
+function ExtractFileNameOnly(const Str:String):String;
+begin
+  Result := ExtractFileName(Str);
+  Result := Copy(Result,1,Length(Result) - 4);
+end;
+
+procedure TCodeGen.GenProtoBufConvertCode;
+var
+  ProtocolList : TRecordProtocolList;
+  Pair : TPair<String,TRecordProtocolList>;
+  I , Index :Integer;
+  Protocol : TRecordProtocol;
+  List , InterfaceList , PasSource , ConvertDict: TStringList;
+  FileName , ClassName :String;
+  SameProtoCheck : TDictionary<DWORD,TRecordProtocol>;
+  ProtoPair : TPair<DWORD,TRecordProtocol>;
+begin
+  SameProtoCheck := TDictionary<DWORD,TRecordProtocol>.Create();
+  ConvertDict := TStringList.Create;
+
+  for Pair in FFileProtocol do
+  begin
+    PasSource := TStringList.Create;
+    ProtocolList := Pair.value;
+    List := TStringList.Create();
+    InterfaceList := TStringList.Create();
+    SameProtoCheck.Clear();
+
+    InterfaceList.Add(Format('uses pbInPut,pbOutPut,pbPublic,uAbstractProtoBufClasses,%s.ProtoClass,',[ExtractFileNameOnly (Pair.Key)]));
+
+    InterfaceList.Add(Format('  %s;',[ExtractFileNameOnly (Pair.Key)]));
+
+    //添加转换类声明
+    InterfaceList.Add('type');
+    InterfaceList.Add(Format('  T%sProtoBufConverter = class',[ExtractFileNameOnly (Pair.Key)]));
+    ClassName := Format('T%sProtoBufConverter',[ExtractFileNameOnly (Pair.Key)]);
+           InterfaceList.Add('  private');
+           InterfaceList.Add('    FPbOutPutBuffer : TProtoBufOutput;');
+           InterfaceList.Add('    FProtoBufObjs:Array[0..65535] of TAbstractProtoBufClass;');
+           InterfaceList.Add('  public');
+           InterfaceList.Add('    constructor Create();');
+           InterfaceList.Add('    destructor Destroy();override;');
+           InterfaceList.Add('    function RecordToProtoBuf(const Ident:Word; const pRecordData:Pointer; const RecordDataLen:Cardinal ; const pProtoBufBuffer:Pointer; const ProtoBufBufferSize:Cardinal ):Integer;');
+           InterfaceList.Add('    function ProtoBufToRecord(const Ident:Word; const pRecordData:Pointer; const RecordDataLen:Cardinal ; const pProtoBufBuffer:Pointer; const ProtoBufBufferSize:Cardinal ):Integer;');
+           InterfaceList.Add('  end;');
+
+           List.Add(Format('  {%s}',[ClassName]));
+           List.Add(Format('constructor %s.Create();',[ClassName]));
+                  List.Add('begin');
+                  List.Add('  FPbOutPutBuffer := TProtoBufOutput.Create();');
+                  List.Add('  FillChar(FProtoBufObjs,SizeOf(FProtoBufObjs),0);');
+                  List.Add('end;');
+            List.Add('');
+            List.Add(Format('destructor %s.Destroy();',[ClassName]));
+            List.Add('var');
+            List.Add('  I : Integer;');
+            List.Add('begin');
+            List.Add('  FPbOutPutBuffer.Free;');
+            List.Add('  For i := 0 to 65535 do begin');
+            List.Add('    if FProtoBufObjs[i] <> nil then FProtoBufObjs[i].Free; ');
+            List.Add('  end;');
+            List.Add('end;');
+
+    //生成互相转换的代码
+    for I := 0 to ProtocolList.Count - 1 do
+    begin
+      Protocol := ProtocolList[i];
+      List.Add(Format('type ptr_%s = ^%s;',[Protocol.Name,Protocol.Name]));
+      Protocol.GenRecordToBufferCode(List,InterfaceList);
+      List.Add('');
+      Protocol.GenProtoBufToRecordCode(List,InterfaceList);
+
+      if (Protocol.SystemID <> 0) or (Protocol.ProtocolID <> 0) then
+      begin
+        SameProtoCheck.Add(MakeLong(Protocol.SystemID,Protocol.ProtocolID),Protocol);
+        //ConvertDict.Add(Format('RtoP[%d] := @RToP_%s;',[MakeWord(Protocol.SystemID,Protocol.ProtocolID),Protocol.Name] ));
+        //ConvertDict.Add(Format('PtoR[%d] := @PToR_%s;',[MakeWord(Protocol.SystemID,Protocol.ProtocolID),Protocol.Name] ));
+      end;
+    end;
+
+    //添加转换代码
+    List.Add(Format('function %s.RecordToProtoBuf(const Ident:Word; const pRecordData:Pointer; const RecordDataLen:Cardinal ; const pProtoBufBuffer:Pointer; const ProtoBufBufferSize:Cardinal ):Integer;',[ClassName]));
+    List.Add('var');
+    List.Add('  RealRecordSize :Cardinal;');
+    List.Add('  ProtoBufObj : TAbstractProtoBufClass;');
+
+    List.Add('begin');
+    List.Add('  Result := 0;');
+    List.Add('  case Ident of');
+    for ProtoPair in SameProtoCheck do
+    begin
+      ProtoPair.Value.GenCaseRecordToProtoCode(List);
+    end;
+    List.Add('  end;');
+    List.Add('end;');
+
+
+
+    List.Add(Format('function %s.ProtoBufToRecord(const Ident:Word; const pRecordData:Pointer; const RecordDataLen:Cardinal ; const pProtoBufBuffer:Pointer; const ProtoBufBufferSize:Cardinal ):Integer;',[ClassName]));
+    List.Add('var');
+    List.Add('  RealRecordSize :Cardinal;');
+    List.Add('  ProtoBufObj : TAbstractProtoBufClass;');
+    List.Add('begin');
+    List.Add('  Result := 0;');
+    List.Add('  case Ident of');
+    for ProtoPair in SameProtoCheck do
+    begin
+      ProtoPair.Value.GenCaseProtoBufToRecord(List);
+    end;
+    List.Add('  end;');
+    List.Add('end;');
+
+
+    FileName := FTargetDir + '\' + ExtractFileNameOnly (Pair.Key) + '.ProtoConvert.pas';
+    PasSource.Add('unit ' + ExtractFileNameOnly (Pair.Key) + '.ProtoConvert;');
+    PasSource.Add('interface');
+    PasSource.AddStrings(interfaceList);
+    PasSource.Add('implementation');
+    PasSource.Add('{$WARN IMPLICIT_STRING_CAST OFF}');
+    PasSource.Add('{$WARN IMPLICIT_STRING_CAST_LOSS OFF}');
+    PasSource.Add('{$HINTS OFF}');
+    PasSource.AddStrings(List);
+
+    PasSource.Add('{$WARN IMPLICIT_STRING_CAST ON}');
+    PasSource.Add('{$WARN IMPLICIT_STRING_CAST_LOSS ON}');
+    PasSource.Add('{$HINTS ON}');
+    PasSource.Add('initialization');
+
+    //PasSource.AddStrings(ConvertDict);
+    PasSource.Add('end.');
+
+
+
+    PasSource.SaveToFile(FileName,TEncoding.UTF8);
+    PasSource.Free;
+  end;
+
+  SameProtoCheck.Free;
+  //ConvertDict.Free;
+end;
+
+procedure TCodeGen.GenProtoBuffProto;
+var
+  ProtocolList : TRecordProtocolList;
+  Pair : TPair<String,TRecordProtocolList>;
+  I:Integer;
+  Protocol : TRecordProtocol;
+  List: TStringList;
+  FileName :String;
+  Gen: TProtoBufGenerator;
+  GenPasCodeFileName:String;
+  OutProtoBufStringList:TStringList;
+  ProFile :TProtoFile;
+  IPos:Integer;
+begin
+  for Pair in FFileProtocol do
+  begin
+    ProtocolList := Pair.value;
+    List := TStringList.Create();
+    for I := 0 to ProtocolList.Count - 1 do
+    begin
+      Protocol := ProtocolList[i];
+      Protocol.GenProto(List);
+    end;
+    FileName := FTargetDir + '\' + ExtractFileNameOnly (Pair.Key) + '.proto';
+    List.SaveToFile(FileName,TEncoding.UTF8);
+
+    ProFile := TProtoFile.Create(nil);
+    ProFile.FileName := ExtractFileNameOnly (Pair.Key) + '.proto';
+    IPos := 1;
+    ProFile.ParseFromProto(List.Text, IPos);
+
+    Gen := TProtoBufGenerator.Create;
+    OutProtoBufStringList := TStringList.Create;
+    Gen.Generate(ProFile,OutProtoBufStringList);
+
+    Gen.Free;
+    GenPasCodeFileName := FTargetDir + '\' + ExtractFileNameOnly (Pair.Key) + '.ProtoClass.pas';
+    OutProtoBufStringList[0] := 'unit ' + ExtractFileNameOnly (Pair.Key) + '.ProtoClass;';
+    OutProtoBufStringList.SaveToFile(GenPasCodeFileName,TEncoding.UTF8);
+
+  end;
+end;
+
+procedure TCodeGen.GenProtoBufUtilsCode;
+var
+  ProtocolList : TRecordProtocolList;
+  Pair : TPair<String,TRecordProtocolList>;
+  I:Integer;
+  Protocol : TRecordProtocol;
+  CodeImplementation , CodeInterface,OutPas: TStringList;
+  Index : Integer;
+  Name:String;
+begin
+  for Pair in FFileProtocol do
+  begin
+    ProtocolList := Pair.value;
+    CodeImplementation := TStringList.Create();
+    CodeInterface := TStringList.Create();
+    for I := 0 to ProtocolList.Count - 1 do
+    begin
+      Protocol := ProtocolList[i];
+      if Protocol.Ident <> 0 then
+        Protocol.genProtoBufUtils(CodeImplementation,CodeInterface);
+    end;
+
+    Index := CodeInterface.Add('function CreateProtocolClass(Ident:Word):TAbstractProtoBufClass;');
+    CodeImplementation.Add(CodeInterface[Index]);
+    CodeImplementation.Add('begin');
+    CodeImplementation.Add('  Result := nil;');
+    CodeImplementation.Add('  case Ident of');
+    for I := 0 to ProtocolList.Count - 1 do
+    begin
+      Protocol := ProtocolList[i];
+      if Protocol.Ident <> 0 then
+       CodeImplementation.Add(Format('  %d : Result := %s.Create();',[Protocol.Ident,Protocol.ProtoBufName]));
+    end;
+
+    CodeImplementation.Add('  end');
+    CodeImplementation.Add('end;');
+
+    OutPas := TStringList.Create;
+    OutPas.Add(Format('unit %s.ProtoUtils;',[ExtractFileNameOnly(Pair.Key)]));
+    OutPas.Add('interface');
+    Name := ExtractFileNameOnly (Pair.Key);
+    OutPas.Add(Format('uses uAbstractProtoBufClasses,%s,%s,%s;',[Name,Name + '.ProtoClass',Name + '.ProtoConvert']));
+    OutPas.AddStrings(CodeInterface);
+    OutPas.Add('implementation');
+    OutPas.AddStrings(CodeImplementation);
+    OutPas.Add('end.');
+    OutPas.SaveToFile(FTargetDir + '\' + ExtractFileNameOnly (Pair.Key) + '.ProtoUtils.pas');
+    CodeImplementation.Free;
+    CodeInterface.Free;
+  end;
 end;
 
 procedure TCodeGen.GenSenderUnit(const UseStr: String);
@@ -727,13 +974,21 @@ var
   RecordProtocol: TRecordProtocol;
   FieldName,TypeName,ControlString:String;
   ProtocolList : TRecordProtocolList;
+  RecordName:String;
 begin
   for I := Low(SyntaxTree.ChildNodes) to High(SyntaxTree.ChildNodes) do
   begin
     Node := SyntaxTree.ChildNodes[i];
     if Node.Typ = ntType then
     begin
-      RecordProtocol := TRecordProtocol.Create(SyntaxTree.GetAttribute(anName),GetUsesString(SyntaxTree),Node.GetAttribute(anType));
+      RecordName := SyntaxTree.GetAttribute(anName);
+
+      //P 开头的忽略 约定为指针定义
+      if (RecordName[1] = 'p') or (RecordName[1]= 'P')  then
+        Continue;
+
+
+      RecordProtocol := TRecordProtocol.Create(RecordName,GetUsesString(SyntaxTree),Node.GetAttribute(anType));
       FProtocols.Add(RecordProtocol);
       if not FFileProtocol.TryGetValue(FileName,ProtocolList) then
       begin
@@ -741,14 +996,14 @@ begin
         FFileProtocol.AddOrSetValue( FileName , ProtocolList );
       end;
 
-      if RecordProtocol.ProtocolID > 0 then
+      if RecordProtocol.Ident > 0 then
       begin
-        if FProtocolDict.ContainsKey(RecordProtocol.ProtocolID) then
+        if FProtocolDict.ContainsKey(RecordProtocol.Ident) then
         begin
-          raise Exception.Create(Format('协议ID 重复 : %d',[RecordProtocol.ProtocolID]));
+          raise Exception.Create(Format('协议ID 重复 : %s',[RecordProtocol.Name]));
         end;
 
-        FProtocolDict.Add(RecordProtocol.ProtocolID,RecordProtocol);
+        FProtocolDict.Add(RecordProtocol.Ident,RecordProtocol);
       end;
 
 

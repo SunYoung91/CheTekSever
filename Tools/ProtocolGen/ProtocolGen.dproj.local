@@ -57,7 +57,7 @@
     <Transaction>2018/09/29 19:51:48.000.170,E:\CheTekSever\CheTekCommon\CheTek.Pool.pas=E:\CheTekSever\Tools\ProtocolGen\CheTek.Pool.pas</Transaction>
   </Transactions>
 	<ProjectSortOrder AutoSort="0" SortType="0">
-    <File Path="D:\CheTekSever"/>
+    <File Path="E:\CheTekSever"/>
     <File Path="..\..\CheTekCommon"/>
     <File Path="..\..\CheTekCommon\CheTek.Pool.pas"/>
     <File Path="DBCodeGenResource.rc"/>
